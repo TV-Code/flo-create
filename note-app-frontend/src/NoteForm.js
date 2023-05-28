@@ -19,7 +19,8 @@ const NoteForm = ({ addNote, updateNote, currentNote, setCurrentNote }) => {
         if (currentNote.id) {
             try {
                 const response = await axios.put(`http://localhost:5000/notes/${currentNote.id}`, note);
-                updateNote(response.data);
+                // Update the note in the App component
+                updateNote(response.data.data);
                 setCurrentNote({ title: '', body: '', id: null });
             } catch (error) {
                 console.error('There was an error!', error);
@@ -27,7 +28,8 @@ const NoteForm = ({ addNote, updateNote, currentNote, setCurrentNote }) => {
         } else {
             try {
                 const response = await axios.post('http://localhost:5000/notes', note);
-                addNote(response.data);
+                // Add the new note to the App component
+                addNote(response.data.data);
             } catch (error) {
                 console.error('There was an error!', error);
             }
