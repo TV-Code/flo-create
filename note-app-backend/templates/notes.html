@@ -1,0 +1,9 @@
+<!DOCTYPE html>
+<html>
+<body>
+{% for note in notes %}
+    <h2>{{ note.title }}</h2>
+    <p>{{ note.content }}</p>
+{% endfor %}
+</body>
+</html>
