@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
-import { DataGrid } from '@mui/x-data-grid';
+import { Button, Box } from '@mui/material';
 
-const NoteList = ({ deleteNote }) => {
+const NoteList = ({ deleteNote, setCurrentNote }) => {
     const [notes, setNotes] = useState([]);
 
     useEffect(() => {
@@ -22,6 +22,10 @@ const NoteList = ({ deleteNote }) => {
         }
     }
 
+    const handleEdit = (note) => {
+        setCurrentNote(note);
+    };
+
     const columns = [
         { field: 'id', headerName: 'ID', width: 70 },
         { field: 'title', headerName: 'Title', width: 130 },
@@ -37,21 +41,23 @@ const NoteList = ({ deleteNote }) => {
                     handleDelete(params.row.id);
                 };
 
-                return <button onClick={onClick}>Delete</button>;
+                return <Button onClick={onClick}>Delete</Button>;
             },
         },
     ];
 
     return (
-        <div style={{ height: 400, width: '100%' }}>
-            <DataGrid 
-                rows={notes} 
-                columns={columns} 
-                pageSize={5} 
-                rowsPerPageOptions={[5]} 
-            />
+        <div>
+            {notes.map(note => (
+                <Box key={note.id}>
+                    <h2>{note.title}</h2>
+                    <p>{note.body}</p>
+                    <Button onClick={() => handleEdit(note)}>Edit</Button>
+                    <Button onClick={() => handleDelete(note.id)}>Delete</Button>
+                </Box>
+            ))}
         </div>
     );
 };
 
-export default NoteList;
+export default NoteList; 
