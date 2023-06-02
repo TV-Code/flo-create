@@ -1,4 +1,4 @@
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, render_template
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from datetime import datetime
@@ -7,7 +7,7 @@ import uuid
 
 def create_app():
     app = Flask(__name__)
-    CORS(app)
+    CORS(app, support_credentials=True)  
     app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///database.db'
 
     db = SQLAlchemy(app)
