@@ -1,63 +1,77 @@
-import React, { useEffect, useState } from 'react';
-import axios from 'axios';
-import { Button, Box } from '@mui/material';
+// NoteList.js
+import React, { useEffect, useState } from 'react';  
+import axios from 'axios';  
+import { List, ListItem, ListItemText, ListItemSecondaryAction, IconButton, Typography, Snackbar, Button } from '@mui/material';  
+import EditIcon from '@mui/icons-material/Edit';
+import DeleteIcon from '@mui/icons-material/Delete';
+import MuiAlert from '@mui/material/Alert';
 
-const NoteList = ({ deleteNote, setCurrentNote }) => {
-    const [notes, setNotes] = useState([]);
+const NoteList = ({ deleteNote, setCurrentNote, setLoading }) => {  
+  const [notes, setNotes] = useState([]);  
+  const [open, setOpen] = useState(false);
 
-    useEffect(() => {
-        axios.get('http://localhost:5000/notes')
-            .then(response => {
-                setNotes(response.data);
-            })
-            .catch(error => console.error(`There was an error retrieving the note list: ${error}`));
-    }, []);
-
-    const handleDelete = async (id) => {
-        try {
-            await axios.delete(`http://localhost:5000/notes/${id}`);
-            deleteNote(id);
-        } catch (error) {
-            console.error(`There was an error deleting the note: ${error}`);
-        }
+  const handleClose = (event, reason) => {
+    if (reason === 'clickaway') {
+      return;
     }
 
-    const handleEdit = (note) => {
-        setCurrentNote(note);
-    };
+    setOpen(false);
+  };
 
-    const columns = [
-        { field: 'id', headerName: 'ID', width: 70 },
-        { field: 'title', headerName: 'Title', width: 130 },
-        { field: 'body', headerName: 'Body', width: 130 },
-        {
-            field: 'delete',
-            headerName: 'Delete',
-            sortable: false,
-            width: 100,
-            disableClickEventBubbling: true,
-            renderCell: (params) => {
-                const onClick = () => {
-                    handleDelete(params.row.id);
-                };
+  useEffect(() => {  
+    setLoading(true);
+    axios.get('http://127.0.0.1:5000/notes')  
+    .then(response => {  
+      setNotes(response.data);  
+      setLoading(false);
+    })  
+    .catch(error => {
+      console.error(`There was an error retrieving the note list: ${error}`);
+      setLoading(false);
+    });
+  }, []);  
 
-                return <Button onClick={onClick}>Delete</Button>;
-            },
-        },
-    ];
+  const handleDelete = async (id) => {  
+    try {  
+      await axios.delete(`http://127.0.0.1:5000/notes/${id}`);  
+      deleteNote(id);  
+      setOpen(true);
+    } catch (error) {  
+      console.error(`There was an error deleting the note: ${error}`);  
+    }  
+  }  
 
-    return (
-        <div>
-            {notes.map(note => (
-                <Box key={note.id}>
-                    <h2>{note.title}</h2>
-                    <p>{note.body}</p>
-                    <Button onClick={() => handleEdit(note)}>Edit</Button>
-                    <Button onClick={() => handleDelete(note.id)}>Delete</Button>
-                </Box>
-            ))}
-        </div>
-    );
-};
+  const handleEdit = (note) => {  
+    setCurrentNote(note);  
+  };  
 
-export default NoteList; 
+  return (  
+    <>
+      <List>
+        {notes.map(note => (  
+          <ListItem key={note.id}>
+            <ListItemText
+              primary={<Typography variant="h5">{note.title}</Typography>}
+              secondary={note.body}
+            />
+            <ListItemSecondaryAction>
+              <IconButton edge="end" aria-label="edit" onClick={() => handleEdit(note)}>
+                <EditIcon />
+              </IconButton>
+              <IconButton edge="end" aria-label="delete" onClick={() => handleDelete(note.id)}>
+                <DeleteIcon />
+              </IconButton>
+            </ListItemSecondaryAction>
+          </ListItem>
+        ))}  
+      </List>
+      <Snackbar open={open} autoHideDuration={6000} onClose={handleClose}>
+        <MuiAlert onClose={handleClose} severity="success" sx={{ width: '100%' }}>
+          Note Deleted Successfully!
+        </MuiAlert>
+      </Snackbar>
+    </>
+  );  
+};  
+
+export default NoteList;
