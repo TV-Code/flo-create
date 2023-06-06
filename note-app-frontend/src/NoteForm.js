@@ -32,6 +32,7 @@ const NoteForm = ({ addNote, updateNote, currentNote, setCurrentNote }) => {
       try {
         const response = await axios.post('http://127.0.0.1:5000/notes', note);
         addNote(response.data.data);
+        setCurrentNote({ title: '', body: '', id: null });
       } catch (error) {
         console.error('There was an error!', error);
       }

@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { CssBaseline, Container, Box, Typography, CircularProgress } from '@mui/material';
-import NoteForm from './NoteForm';
-import NoteList from './NoteList';
+import { BrowserRouter as Router } from 'react-router-dom';
+import MainContent from './MainContent';
+import Sidebar from './Sidebar';
 import { createTheme, ThemeProvider } from '@mui/material/styles';
 
 const theme = createTheme({
@@ -37,48 +38,66 @@ const App = () => {
         setLoading(false);
     };
 
-    const addNote = (note) => {  
-        setNotes([...notes, note]);  
+    const addNote = async (note) => {
+        setLoading(true);  
+        try {
+            const response = await axios.post('http://127.0.0.1:5000/notes', note);
+            setNotes([...notes, response.data.data]);
+        } catch (error) {
+            console.error('There was an error!', error);
+        }
+        setLoading(false);
     };  
 
-    const updateNote = (updatedNote) => {  
-        setNotes(notes.map(note => (note.id === updatedNote.id ? updatedNote : note)));  
+    const updateNote = async (updatedNote) => {
+        setLoading(true);
+        try {
+            const response = await axios.put(`http://127.0.0.1:5000/notes/${updatedNote.id}`, updatedNote);
+            setNotes(notes.map(note => (note.id === response.data.data.id ? response.data.data : note)));
+        } catch (error) {
+            console.error('There was an error!', error);
+        }
+        setLoading(false);
     };  
 
-    const deleteNote = (id) => {  
-        setNotes(notes.filter(note => note.id !== id));
+    const deleteNote = async (id) => {
+        setLoading(true);
+        try {
+            await axios.delete(`http://127.0.0.1:5000/notes/${id}`);
+            setNotes(notes.filter(note => note.id !== id));
+        } catch (error) {
+            console.error(`There was an error deleting the note: ${error}`);
+        }
+        setLoading(false);
     };
 
-  return (
-    <ThemeProvider theme={theme}>
-      <CssBaseline />
-      <Container>
-        <Box sx={{ my: 4 }}>
-          <Typography variant="h4" component="h1" gutterBottom>
-            My Note App
-          </Typography>
-          {loading ? (
-            <CircularProgress />
-          ) : (
-            <>
-              <NoteForm
-                addNote={addNote}
-                updateNote={updateNote}
-                currentNote={currentNote}
-                setCurrentNote={setCurrentNote}
-              />
-              <NoteList
-                notes={notes}
-                deleteNote={deleteNote}
-                setCurrentNote={setCurrentNote}
-                setLoading={setLoading}
-              />
-            </>
-          )}
-        </Box>
-      </Container>
-    </ThemeProvider>
-  );
+    return (
+        <Router>
+            <ThemeProvider theme={theme}>
+                <CssBaseline />
+                <Sidebar />
+                <Container>
+                    <Box sx={{ my: 4 }}>
+                        <Typography variant="h4" component="h1" gutterBottom>
+                            My Note App
+                        </Typography>
+                        {loading ? (
+                            <CircularProgress />
+                        ) : (
+                            <MainContent
+                                addNote={addNote}
+                                updateNote={updateNote}
+                                currentNote={currentNote}
+                                setCurrentNote={setCurrentNote}
+                                notes={notes}
+                                deleteNote={deleteNote}
+                            />
+                        )}
+                    </Box>
+                </Container>
+            </ThemeProvider>
+        </Router>
+    );
 };
 
 export default App;

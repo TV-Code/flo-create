@@ -1,14 +1,15 @@
 // NoteList.js
 import React, { useEffect, useState } from 'react';  
 import axios from 'axios';  
-import { List, ListItem, ListItemText, ListItemSecondaryAction, IconButton, Typography, Snackbar, Button } from '@mui/material';  
+import { List, ListItem, ListItemText, ListItemSecondaryAction, IconButton, Typography, Snackbar } from '@mui/material';  
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import MuiAlert from '@mui/material/Alert';
 
-const NoteList = ({ deleteNote, setCurrentNote, setLoading }) => {  
+const NoteList = ({ deleteNote, setCurrentNote }) => {  
   const [notes, setNotes] = useState([]);  
   const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   const handleClose = (event, reason) => {
     if (reason === 'clickaway') {
@@ -35,7 +36,7 @@ const NoteList = ({ deleteNote, setCurrentNote, setLoading }) => {
     try {  
       await axios.delete(`http://127.0.0.1:5000/notes/${id}`);  
       deleteNote(id);  
-      setOpen(true);
+      setNotes(notes.filter(note => note.id !== id));
     } catch (error) {  
       console.error(`There was an error deleting the note: ${error}`);  
     }  
