@@ -5,13 +5,16 @@ from datetime import datetime
 from flask_cors import CORS
 import uuid
 
+db = SQLAlchemy()
+migrate = Migrate()
+
 def create_app():
     app = Flask(__name__)
-    CORS(app, support_credentials=True)  
+    CORS(app, resources={r"/*": {"origins": "http://localhost:3000"}}, support_credentials=True) 
     app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///database.db'
 
-    db = SQLAlchemy(app)
-    Migrate(app, db)
+    db.init_app(app)
+    migrate.init_app(app, db)
 
     class Note(db.Model):
         __tablename__ = 'note'
@@ -37,24 +40,22 @@ def create_app():
     def home():
         return render_template('index.html')
 
-
     @app.route('/notes', methods=['GET'])
     def get_notes():
         notes = Note.query.all()
-        return jsonify([note.to_dict() for note in notes]), 200
+        response = jsonify([note.to_dict() for note in notes]), 200
+        return response
 
     @app.route('/notes/<id>', methods=['GET'])
     def get_note(id):
-        note = Note.query.get(id)
-        if note is None:
-            return jsonify({"status": "error", "message": "Note not found"}), 404
-        else:
-            return jsonify(note.to_dict()), 200
+        note = Note.query.get_or_404(id)
+        return jsonify(note.to_dict()), 200
 
     @app.route('/notes', methods=['POST'])
     def create_note():
         data = request.get_json()
-        app.logger.info(f"Received data: {data}")
+        if not data or 'title' not in data or 'body' not in data:
+            return jsonify({"status": "error", "message": "Missing required data"}), 400
         tags = ','.join(data.get('tags', []))
         note = Note(title=data['title'], tags=tags, body=data['body'])
         db.session.add(note)
@@ -63,30 +64,23 @@ def create_app():
 
     @app.route('/notes/<id>', methods=['PUT'])
     def update_note(id):
-        note = Note.query.get(id)
-        if note is None:
-            return jsonify({"status": "error", "message": "Note not found"}), 404
-        else:
-            data = request.get_json()
-            if 'title' in data:
-                note.title = data['title']
-            if 'tags' in data:
-                note.tags = ','.join(data['tags'])
-            if 'body' in data:
-                note.body = data['body']
-            db.session.commit()
-            return jsonify({"status": "success", "message": "Note updated", "data": note.to_dict()}), 200
-
+        note = Note.query.get_or_404(id)
+        data = request.get_json()
+        if 'title' in data:
+            note.title = data['title']
+        if 'tags' in data:
+            note.tags = ','.join(data['tags'])
+        if 'body' in data:
+            note.body = data['body']
+        db.session.commit()
+        return jsonify({"status": "success", "message": "Note updated", "data": note.to_dict()}), 200
 
     @app.route('/notes/<id>', methods=['DELETE'])
     def delete_note(id):
-        note = Note.query.get(id)
-        if note is None:
-            return jsonify({"status": "error", "message": "Note not found"}), 404
-        else:
-            db.session.delete(note)
-            db.session.commit()
-            return jsonify({"status": "success", "message": "Note deleted"}), 200
+        note = Note.query.get_or_404(id)
+        db.session.delete(note)
+        db.session.commit()
+        return jsonify({"status": "success", "message": "Note deleted"}), 200
 
     return app
 
