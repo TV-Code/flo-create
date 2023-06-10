@@ -1,17 +1,19 @@
 import React, { useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { TextField, Button, Box, Snackbar, IconButton } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 
 const NoteForm = ({ addNote, updateNote, currentNote, setCurrentNote }) => {
-  const [title, setTitle] = useState(currentNote.title);
-  const [body, setBody] = useState(currentNote.body);
+  const [title, setTitle] = useState(currentNote ? currentNote.title : '');
+  const [body, setBody] = useState(currentNote ? currentNote.body : '');
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
+  const { id } = useParams();
 
   useEffect(() => {
-    setTitle(currentNote.title);
-    setBody(currentNote.body);
+    setTitle(currentNote ? currentNote.title : '');
+    setBody(currentNote ? currentNote.body : '');
   }, [currentNote]);
 
   const handleSubmit = async (event) => {
@@ -20,7 +22,7 @@ const NoteForm = ({ addNote, updateNote, currentNote, setCurrentNote }) => {
 
     const note = { title, body };
 
-    if (currentNote.id) {
+    if (currentNote && currentNote.id) {
       try {
         const response = await axios.put(`http://127.0.0.1:5000/notes/${currentNote.id}`, note);
         updateNote(response.data.data);
@@ -73,7 +75,7 @@ const NoteForm = ({ addNote, updateNote, currentNote, setCurrentNote }) => {
         sx={{ mb: 1 }}
       />
       <Button variant="contained" color="primary" type="submit" disabled={loading}>
-        {currentNote.id ? 'Update Note' : 'Add Note'}
+        {currentNote && currentNote.id ? 'Update Note' : 'Add Note'}
       </Button>
       <Snackbar
         open={open}

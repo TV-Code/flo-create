@@ -1,6 +1,6 @@
-// NoteList.js
-import React, { useEffect, useState } from 'react';  
+import React, { useEffect, useState } from 'react';
 import axios from 'axios';  
+import { useNavigate } from 'react-router-dom'; 
 import { List, ListItem, ListItemText, ListItemSecondaryAction, IconButton, Typography, Snackbar } from '@mui/material';  
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -10,6 +10,7 @@ const NoteList = ({ deleteNote, setCurrentNote }) => {
   const [notes, setNotes] = useState([]);  
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
 
   const handleClose = (event, reason) => {
     if (reason === 'clickaway') {
@@ -35,7 +36,6 @@ const NoteList = ({ deleteNote, setCurrentNote }) => {
   const handleDelete = async (id) => {  
     try {  
       await axios.delete(`http://127.0.0.1:5000/notes/${id}`);  
-      deleteNote(id);  
       setNotes(notes.filter(note => note.id !== id));
     } catch (error) {  
       console.error(`There was an error deleting the note: ${error}`);  
@@ -43,7 +43,7 @@ const NoteList = ({ deleteNote, setCurrentNote }) => {
   }  
 
   const handleEdit = (note) => {  
-    setCurrentNote(note);  
+    navigate(`/notes/${note.id}`);  
   };  
 
   return (  

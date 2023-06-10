@@ -1,25 +1,40 @@
-import React from 'react';
-import { Routes, Route } from 'react-router-dom';
+import React, { useEffect } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import NoteForm from './NoteForm';
 import NoteList from './NoteList';
 
 const MainContent = ({ addNote, updateNote, currentNote, setCurrentNote, notes, deleteNote }) => {
+    const navigate = useNavigate();
+    const { id } = useParams();
+
+    useEffect(() => {
+        if (id) {
+            const note = notes.find((note) => note.id === id);
+            setCurrentNote(note);
+        }
+    }, [id, notes, setCurrentNote]);
+
     return (
-        <Routes>
-            <Route
-                path="/"
-                exact
-                render={() => <NoteList notes={notes} deleteNote={deleteNote} setCurrentNote={setCurrentNote} />}
-            />
-            <Route
-                path="/edit/:id"
-                render={() => <NoteForm updateNote={updateNote} currentNote={currentNote} setCurrentNote={setCurrentNote} />}
-            />
-            <Route
-                path="/add"
-                render={() => <NoteForm addNote={addNote} currentNote={currentNote} setCurrentNote={setCurrentNote} />}
-            />
-        </Routes>
+        <>
+            {id ? (
+                <NoteForm 
+                    updateNote={updateNote} 
+                    currentNote={currentNote} 
+                    setCurrentNote={setCurrentNote}
+                    navigate={navigate} 
+                />
+            ) : (
+                <>
+                    <button onClick={() => navigate('/notes/new')}>Add Note</button>
+                    <NoteList 
+                        notes={notes} 
+                        deleteNote={deleteNote} 
+                        setCurrentNote={setCurrentNote} 
+                        navigate={navigate}
+                    />
+                </>
+            )}
+        </>
     );
 };
 
