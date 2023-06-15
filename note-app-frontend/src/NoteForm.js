@@ -4,16 +4,22 @@ import axios from 'axios';
 import { TextField, Button, Box, Snackbar, IconButton } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 
-const NoteForm = ({ addNote, updateNote, currentNote, setCurrentNote }) => {
+const NoteForm = ({ addNote, updateNote, currentNote, setCurrentNote, action }) => {
   const [title, setTitle] = useState(currentNote ? currentNote.title : '');
   const [body, setBody] = useState(currentNote ? currentNote.body : '');
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
   const { id } = useParams();
+  const navigate = useNavigate();
 
   useEffect(() => {
-    setTitle(currentNote ? currentNote.title : '');
-    setBody(currentNote ? currentNote.body : '');
+    if (currentNote) {
+      setTitle(currentNote.title);
+      setBody(currentNote.body);
+    } else {
+      setTitle('');
+      setBody('');
+    }
   }, [currentNote]);
 
   const handleSubmit = async (event) => {
@@ -21,30 +27,29 @@ const NoteForm = ({ addNote, updateNote, currentNote, setCurrentNote }) => {
     setLoading(true);
 
     const note = { title, body };
-
-    if (currentNote && currentNote.id) {
-      try {
-        const response = await axios.put(`http://127.0.0.1:5000/notes/${currentNote.id}`, note);
-        updateNote(response.data.data);
-        setCurrentNote({ title: '', body: '', id: null });
-      } catch (error) {
-        console.error('There was an error!', error);
+    
+    if (action === 'edit') {
+        try {
+          const response = await axios.put(`http://127.0.0.1:5000/notes/${id}`, note);
+          updateNote(response.data.data);
+          setCurrentNote(null);
+        } catch (error) {
+          console.error('There was an error!', error);
+        }
+      } else if (action === 'new') {
+        try {
+          const response = await axios.post('http://127.0.0.1:5000/notes', note);
+          addNote(response.data.data);
+          setCurrentNote(null);
+        } catch (error) {
+          console.error('There was an error!', error);
+        }
       }
-    } else {
-      try {
-        const response = await axios.post('http://127.0.0.1:5000/notes', note);
-        addNote(response.data.data);
-        setCurrentNote({ title: '', body: '', id: null });
-      } catch (error) {
-        console.error('There was an error!', error);
-      }
-    }
-
-    setLoading(false);
-    setOpen(true);
-    setTitle('');
-    setBody('');
-  };
+  
+      setLoading(false);
+      setOpen(true);
+      navigate('/notes');
+    };
 
   const handleClose = (event, reason) => {
     if (reason === 'clickaway') {
@@ -75,9 +80,13 @@ const NoteForm = ({ addNote, updateNote, currentNote, setCurrentNote }) => {
         sx={{ mb: 1 }}
       />
       <Button variant="contained" color="primary" type="submit" disabled={loading}>
-        {currentNote && currentNote.id ? 'Update Note' : 'Add Note'}
+        {loading ? 'Loading...' : 'Save'}
       </Button>
       <Snackbar
+        anchorOrigin={{
+          vertical: 'bottom',
+          horizontal: 'left',
+        }}
         open={open}
         autoHideDuration={6000}
         onClose={handleClose}

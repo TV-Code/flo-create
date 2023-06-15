@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { CssBaseline, Container, Box, Typography, CircularProgress } from '@mui/material';
-import { BrowserRouter as Router, Routes, Route, useParams } from 'react-router-dom';
+import { CssBaseline, Container, Typography, CircularProgress } from '@mui/material';
+import { BrowserRouter as Router, Routes, Route, useParams, useLocation } from 'react-router-dom';
 import NoteForm from './NoteForm';
 import NoteList from './NoteList';
 import Sidebar from './Sidebar';
@@ -16,18 +16,22 @@ const theme = createTheme({
       main: '#f9CB08',
     },
     secondary: {
-      main: '#e3dac9',
+      main: '#fbeec1',
     },
   },
 });
 
 const App = () => {
+  const [noteId, setNoteId] = useState(null);
   const [notes, setNotes] = useState([]);  
-  const [currentNote, setCurrentNote] = useState({ title: '', body: '', id: null });
+  const [tasks, setTasks] = useState([]);
+  const [currentNote, setCurrentNote] = useState(null);
   const [loading, setLoading] = useState(false);
+  const location = useLocation();
 
   useEffect(() => {
     fetchNotes();
+    fetchTasks();
   }, []);
 
   const fetchNotes = async () => {
@@ -35,21 +39,26 @@ const App = () => {
     try {
       const response = await axios.get('http://127.0.0.1:5000/notes');
       setNotes(response.data);
+      setLoading(false);
     } catch (error) {
       console.error(`There was an error retrieving the note list: ${error}`);
+      setLoading(false);
     }
-    setLoading(false);
   };
+
 
   const fetchNote = async (id) => {
     setLoading(true);
+    setNoteId(id);
     try {
       const response = await axios.get(`http://127.0.0.1:5000/notes/${id}`);
       setCurrentNote(response.data);
     } catch (error) {
       console.error(`There was an error retrieving the note: ${error}`);
+      setCurrentNote(null);
+    } finally {
+        setLoading(false);
     }
-    setLoading(false);
   };
 
   const addNote = async (note) => {
@@ -59,9 +68,11 @@ const App = () => {
       setNotes([...notes, response.data.data]);
     } catch (error) {
       console.error('There was an error!', error);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };  
+    
 
   const updateNote = async (updatedNote) => {
     setLoading(true);
@@ -85,6 +96,51 @@ const App = () => {
     setLoading(false);
   };
 
+  const EditNoteRoute = () => {
+    const { id } = useParams();
+  
+    useEffect(() => {
+      if (id !== noteId) {
+        fetchNote(id);
+      }
+    }, [id]);
+  
+    return loading ? (
+      <CircularProgress />
+    ) : (
+      <NoteForm
+        updateNote={updateNote}
+        currentNote={currentNote}
+        setCurrentNote={setCurrentNote}
+        action='edit'
+      />
+    );
+  };
+  
+  const NewNoteRoute = () => {
+    return (
+      <NoteForm
+        addNote={addNote}
+        currentNote={currentNote}
+        setCurrentNote={setCurrentNote}
+        action='new'
+      />
+    );
+  };
+
+  const fetchTasks = async () => {
+    setLoading(true);
+    try {
+      const response = await axios.get('http://127.0.0.1:5000/tasks');
+      setTasks(response.data);
+      setLoading(false);
+    } catch (error) {
+      console.error(`There was an error retrieving the tasks: ${error}`);
+      setLoading(false);
+    }
+  };
+  
+
   return (
     <Router>
       <ThemeProvider theme={theme}>
@@ -93,13 +149,13 @@ const App = () => {
           <Typography variant="h2" align="center" color="textPrimary" gutterBottom>
             Note Taking App
           </Typography>
-          <div style={{ display: 'flex' }}>
+          <div style={{ display: 'flex', flexDirection: 'row' }}>
             <Sidebar />
             <Routes>
              <Route path="/notes" element={<NoteList notes={notes} loading={loading} deleteNote={deleteNote} setCurrentNote={setCurrentNote} />} />
-             <Route path="/notes/new" element={<NoteForm addNote={addNote} currentNote={currentNote} setCurrentNote={setCurrentNote} />} />
-             <Route path="/notes/:id" element={<NoteForm updateNote={updateNote} currentNote={currentNote} setCurrentNote={setCurrentNote} fetchNote={fetchNote} />} />
-             <Route path="/tasks" element={<Tasks />} />
+             <Route path="/notes/new" element={<NewNoteRoute />} />
+             <Route path="/notes/:id" element={<EditNoteRoute />} />
+             <Route path="/tasks" element={<Tasks tasks={tasks} />} />
              <Route path="/journal" element={<Journal />} />
              <Route path="/chat" element={<Chat />} />
             </Routes>

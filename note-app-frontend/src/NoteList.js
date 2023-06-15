@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';  
 import { useNavigate } from 'react-router-dom'; 
-import { List, ListItem, ListItemText, ListItemSecondaryAction, IconButton, Typography, Snackbar } from '@mui/material';  
+import { Box, List, ListItem, ListItemText, ListItemSecondaryAction, IconButton, Typography, Snackbar } from '@mui/material';  
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import MuiAlert from '@mui/material/Alert';
@@ -47,32 +47,35 @@ const NoteList = ({ deleteNote, setCurrentNote }) => {
   };  
 
   return (  
-    <>
-      <List>
-        {notes.map(note => (  
-          <ListItem key={note.id}>
-            <ListItemText
-              primary={<Typography variant="h5">{note.title}</Typography>}
-              secondary={note.body}
-            />
-            <ListItemSecondaryAction>
+    <Box sx={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))',
+        gap: '1rem',
+      }}>
+          {notes.map(note => (  
+            <Box key={note.id} sx={{ 
+              padding: '1rem',
+              border: '1px solid black',
+              borderRadius: '5px',
+              backgroundColor: 'secondary.main'
+            }}>
+              <Typography variant="h5">{note.title}</Typography>
+              <Typography>{note.body}</Typography>
               <IconButton edge="end" aria-label="edit" onClick={() => handleEdit(note)}>
                 <EditIcon />
               </IconButton>
               <IconButton edge="end" aria-label="delete" onClick={() => handleDelete(note.id)}>
                 <DeleteIcon />
               </IconButton>
-            </ListItemSecondaryAction>
-          </ListItem>
-        ))}  
-      </List>
-      <Snackbar open={open} autoHideDuration={6000} onClose={handleClose}>
-        <MuiAlert onClose={handleClose} severity="success" sx={{ width: '100%' }}>
-          Note Deleted Successfully!
-        </MuiAlert>
-      </Snackbar>
-    </>
-  );  
-};  
+            </Box>
+          ))}  
+        <Snackbar open={open} autoHideDuration={6000} onClose={handleClose}>
+          <MuiAlert onClose={handleClose} severity="success" sx={{ width: '100%' }}>
+            Note Deleted Successfully!
+          </MuiAlert>
+        </Snackbar>
+      </Box>
+    );  
+  };  
 
 export default NoteList;
