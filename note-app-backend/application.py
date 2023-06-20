@@ -16,10 +16,23 @@ def create_app():
     db.init_app(app)
     migrate.init_app(app, db)
 
+    class Category(db.Model):
+        id = db.Column(db.Integer, primary_key=True)
+        name = db.Column(db.String(50), nullable=False)
+        color = db.Column(db.String(20), nullable=False)
+
+        def to_dict(self):
+            return {
+                'id': self.id,
+                'name': self.name,
+                'color': self.color,
+            }
+
     class Note(db.Model):
         __tablename__ = 'note'
         __table_args__ = {'extend_existing': True}
         id = db.Column(db.String, primary_key=True, default=lambda: str(uuid.uuid4()))
+        category_id = db.Column(db.Integer, db.ForeignKey('category.id'))
         title = db.Column(db.String(120), nullable=False)
         tags = db.Column(db.String(120), nullable=True)
         body = db.Column(db.String(500), nullable=False)
@@ -29,6 +42,7 @@ def create_app():
         def to_dict(self):
             return {
                 'id': self.id,
+                'category_id': self.category_id,
                 'title': self.title,
                 'tags': self.tags.split(",") if self.tags else [],
                 'body': self.body,
@@ -40,6 +54,7 @@ def create_app():
         __tablename__ = 'task'
         __table_args__ = {'extend_existing': True} 
         id = db.Column(db.String, primary_key=True, default=lambda: str(uuid.uuid4()))
+        category_id = db.Column(db.Integer, db.ForeignKey('category.id'))
         title = db.Column(db.String(120), nullable=False)
         description = db.Column(db.String(500), nullable=True)
         status = db.Column(db.String(120), nullable=False, default="Not Started")
@@ -51,6 +66,7 @@ def create_app():
         def to_dict(self):
             return {
                 'id': self.id,
+                'category_id': self.category_id,
                 'title': self.title,
                 'description': self.description,
                 'status': self.status,
@@ -93,6 +109,8 @@ def create_app():
         data = request.get_json()
         if 'title' in data:
             note.title = data['title']
+        if 'category_id' in  data:
+            note.category_id = data['category_id']
         if 'tags' in data:
             note.tags = ','.join(data['tags'])
         if 'body' in data:
@@ -136,6 +154,8 @@ def create_app():
             task.title = data['title']
         if 'description' in data:
             task.description = data['description']
+        if 'category_id' in data:
+            task.category = data['category_id']
         if 'status' in data:
             task.status = data['status']
         if 'weight' in data:
