@@ -7,6 +7,7 @@ import CloseIcon from '@mui/icons-material/Close';
 const NoteForm = ({ addNote, updateNote, currentNote, setCurrentNote, action }) => {
   const [title, setTitle] = useState(currentNote ? currentNote.title : '');
   const [body, setBody] = useState(currentNote ? currentNote.body : '');
+  const [category_id, setCategory_id] = useState(currentNote ? currentNote.category_id : '');
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
   const { id } = useParams();
@@ -16,9 +17,11 @@ const NoteForm = ({ addNote, updateNote, currentNote, setCurrentNote, action }) 
     if (currentNote) {
       setTitle(currentNote.title);
       setBody(currentNote.body);
+      setCategory_id(currentNote.category_id);
     } else {
       setTitle('');
       setBody('');
+      setCategory_id('');
     }
   }, [currentNote]);
 
@@ -26,7 +29,7 @@ const NoteForm = ({ addNote, updateNote, currentNote, setCurrentNote, action }) 
     event.preventDefault();
     setLoading(true);
 
-    const note = { title, body };
+    const note = { title, body, category_id };
     
     if (action === 'edit') {
         try {
@@ -78,6 +81,14 @@ const NoteForm = ({ addNote, updateNote, currentNote, setCurrentNote, action }) 
         multiline
         rows={4}
         sx={{ mb: 1 }}
+      />
+      <TextField
+        fullWidth
+        label="Category"
+        value={category_id}
+        onChange={e => setCategory_id(e.target.value)}
+        variant="outlined"
+        sx={{ mb: 1}}
       />
       <Button variant="contained" color="primary" type="submit" disabled={loading}>
         {loading ? 'Loading...' : 'Save'}

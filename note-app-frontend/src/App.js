@@ -1,11 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { CssBaseline, Container, Typography, CircularProgress } from '@mui/material';
-import { BrowserRouter as Router, Routes, Route, useParams, useLocation } from 'react-router-dom';
+import { CssBaseline, Container, Typography, CircularProgress, IconButton } from '@mui/material';
+import MenuIcon from '@mui/icons-material/Menu';
+import { BrowserRouter as Router, Routes, Route, Switch, useParams, useLocation } from 'react-router-dom';
 import NoteForm from './NoteForm';
 import NoteList from './NoteList';
 import Sidebar from './Sidebar';
 import Tasks from './Tasks';
+import TaskForm from './TaskForm';
+import SecondarySidebar from './SecondarySidebar';
 import Journal from './Journal';
 import Chat from './Chat';
 import { createTheme, ThemeProvider } from '@mui/material/styles';
@@ -23,16 +26,22 @@ const theme = createTheme({
 
 const App = () => {
   const [noteId, setNoteId] = useState(null);
+  const [taskId, setTaskId] = useState(null);
   const [notes, setNotes] = useState([]);  
   const [tasks, setTasks] = useState([]);
   const [currentNote, setCurrentNote] = useState(null);
+  const [currentTask, setCurrentTask] = useState(null);
   const [loading, setLoading] = useState(false);
-  const location = useLocation();
+  const [isSecondarySidebarOpen, setIsSecondarySidebarOpen] = useState(false);
 
   useEffect(() => {
     fetchNotes();
     fetchTasks();
   }, []);
+
+  const toggleSecondarySidebar = () => {
+    setIsSecondarySidebarOpen(!isSecondarySidebarOpen);
+  }
 
   const fetchNotes = async () => {
     setLoading(true);
@@ -139,31 +148,144 @@ const App = () => {
       setLoading(false);
     }
   };
+
+  const fetchTask = async (id) => {
+    setLoading(true);
+    setTaskId(id); 
+    try {
+      const response = await axios.get(`http://127.0.0.1:5000/tasks/${id}`);
+      setCurrentTask(response.data);
+    } catch (error) {
+      console.error(`There was an error retrieving the task: ${error}`);
+      setCurrentTask(null);
+    } finally {
+        setLoading(false);
+    }
+};
+
+
+  const addTask = async (task) => {
+    setLoading(true);  
+    try {
+      const response = await axios.post('http://127.0.0.1:5000/tasks', task);
+      setTasks([...tasks, response.data.data]);
+    } catch (error) {
+      console.error('There was an error!', error);
+    } finally {
+      setLoading(false);
+    }
+};
+
+  const updateTask = async (updatedTask) => {
+    setLoading(true);
+    try {
+      const response = await axios.put(`http://127.0.0.1:5000/tasks/${updatedTask.id}`, updatedTask);
+      setTasks(tasks.map(task => (task.id === response.data.data.id ? response.data.data : task)));
+    } catch (error) {
+      console.error('There was an error!', error);
+    }
+    setLoading(false);
+};
+
+
+
+  const NewTaskRoute = () => {
+    return (
+      <TaskForm
+        addTask={addTask}
+        currentTask={currentTask}
+        setCurrentTask={setCurrentTask}
+        action='new'
+      />
+  );
+};
+
+  const EditTaskRoute = () => {
+    const { id } = useParams();
   
+    useEffect(() => {
+      if (id !== taskId) {
+        fetchTask(id);
+      }
+    }, [id]);
+    
+    useEffect(() => {
+      if (currentTask && tasks.length) {
+        const matchingTask = tasks.find(task => task.id === currentTask.id);
+        if (!matchingTask || matchingTask !== currentTask) {
+          setCurrentTask(matchingTask);
+        }
+      }
+    }, [tasks, currentTask]);
+    
+
+    return loading ? (
+      <CircularProgress />
+    ) : (
+      <TaskForm
+        updateTask={updateTask}
+        currentTask={currentTask}
+        setCurrentTask={setCurrentTask}
+        action='edit'
+      />
+    );
+  };
+  
+  const renderSecondarySidebar = () => {
+    const currentPath = window.location.pathname;
+    if (currentPath.startsWith('/notes') || currentPath.startsWith('/tasks')) {
+      return <SecondarySidebar isDrawerOpen={isSecondarySidebarOpen} toggleDrawer={toggleSecondarySidebar} />;
+    }
+    return null;
+  };
+
+  const MainRoutes = () => {
+    const location = useLocation();
+
+    return (
+      <Routes>
+        <Route path="/notes" element={<NoteList notes={notes} loading={loading} deleteNote={deleteNote} setCurrentNote={setCurrentNote} />} />
+        <Route path="/notes/new" element={location.pathname === "/notes/new" ? <NewNoteRoute /> : null} />
+        <Route path="/notes/:id" element={<EditNoteRoute />} />
+        <Route path="/tasks" element={<Tasks tasks={tasks} />} />
+        <Route path="/tasks/new" element={location.pathname === "/tasks/new" ? <NewTaskRoute /> : null} />
+        <Route path="/tasks/:id" element={<EditTaskRoute />} />
+        <Route path="/journal" element={<Journal />} />
+        <Route path="/chat" element={<Chat />} />
+      </Routes>
+    )
+  }
 
   return (
     <Router>
       <ThemeProvider theme={theme}>
         <CssBaseline />
-        <Container maxWidth="md">
-          <Typography variant="h2" align="center" color="textPrimary" gutterBottom>
-            Note Taking App
-          </Typography>
-          <div style={{ display: 'flex', flexDirection: 'row' }}>
+        <div style={{ display: 'flex', flexDirection: 'row' }}>
+          <div>
             <Sidebar />
-            <Routes>
-             <Route path="/notes" element={<NoteList notes={notes} loading={loading} deleteNote={deleteNote} setCurrentNote={setCurrentNote} />} />
-             <Route path="/notes/new" element={<NewNoteRoute />} />
-             <Route path="/notes/:id" element={<EditNoteRoute />} />
-             <Route path="/tasks" element={<Tasks tasks={tasks} />} />
-             <Route path="/journal" element={<Journal />} />
-             <Route path="/chat" element={<Chat />} />
-            </Routes>
           </div>
-        </Container>
+          <div style={{ flexGrow: 1, overflow: 'hidden', padding: '20px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', marginBottom: '20px' }}>
+              <IconButton
+                edge="start"
+                color="inherit"
+                aria-label="menu"
+                onClick={toggleSecondarySidebar}
+              >
+                <MenuIcon />
+              </IconButton>
+              <Typography variant="h3" align="center" color="textPrimary" style={{ flexGrow: 1 }}>
+                MindMap
+              </Typography>
+            </div>
+            {renderSecondarySidebar()}
+            <MainRoutes />
+          </div>
+        </div>
       </ThemeProvider>
     </Router>
   );
 };
+
 
 export default App;
