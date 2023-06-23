@@ -9,6 +9,8 @@ import Sidebar from './Sidebar';
 import Tasks from './Tasks';
 import TaskForm from './TaskForm';
 import SecondarySidebar from './SecondarySidebar';
+import CategoryView from './CategoryView';
+import Header from './Header';
 import Journal from './Journal';
 import Chat from './Chat';
 import { createTheme, ThemeProvider } from '@mui/material/styles';
@@ -31,6 +33,9 @@ const App = () => {
   const [tasks, setTasks] = useState([]);
   const [currentNote, setCurrentNote] = useState(null);
   const [currentTask, setCurrentTask] = useState(null);
+  const [selectedCategory, setSelectedCategory] = useState(null);
+  const [activeTab, setActiveTab] = useState(0);
+  const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(false);
   const [isSecondarySidebarOpen, setIsSecondarySidebarOpen] = useState(false);
 
@@ -42,6 +47,45 @@ const App = () => {
   const toggleSecondarySidebar = () => {
     setIsSecondarySidebarOpen(!isSecondarySidebarOpen);
   }
+
+  const handleCategorySelect = (category) => {
+    fetchNotesByCategory(category.id);
+    fetchTasksByCategory(category.id);
+    setIsSecondarySidebarOpen(false);
+  };
+  
+  const handleTabChange = (event, newValue) => {
+    setActiveTab(event.newValue);
+  }
+
+  const handleSearch = (event) => {
+    setSearchTerm(event.target.value);
+  }
+
+  const fetchNotesByCategory = async (categoryId) => {
+    setLoading(true);
+    try {
+      const response = await axios.get(`http://127.0.0.1:5000/notes?category_id=${categoryId}`);
+      setNotes(response.data);
+      setLoading(false);
+    } catch (error) {
+      console.error(`There was an error retrieving the notes for the selected category: ${error}`);
+      setLoading(false);
+    }
+  };
+
+  const fetchTasksByCategory = async (categoryId) => {
+    setLoading(true);
+    try {
+      const response = await axios.get(`http://127.0.0.1:5000/tasks?category_id=${categoryId}`);
+      setTasks(response.data);
+      setLoading(false);
+    } catch (error) {
+      console.error(`There was an error retrieving the tasks for the selected category: ${error}`);
+      setLoading(false);
+    }
+  };
+
 
   const fetchNotes = async () => {
     setLoading(true);
@@ -234,7 +278,16 @@ const App = () => {
   const renderSecondarySidebar = () => {
     const currentPath = window.location.pathname;
     if (currentPath.startsWith('/notes') || currentPath.startsWith('/tasks')) {
-      return <SecondarySidebar isDrawerOpen={isSecondarySidebarOpen} toggleDrawer={toggleSecondarySidebar} />;
+      return (
+      <div className="App">
+            <SecondarySidebar 
+              isDrawerOpen={isSecondarySidebarOpen} 
+              toggleDrawer={toggleSecondarySidebar} 
+              onCategorySelect={handleCategorySelect}
+             />
+             {selectedCategory && <CategoryView category={selectedCategory} />}
+           </div>
+      );
     }
     return null;
   };
@@ -277,6 +330,12 @@ const App = () => {
               <Typography variant="h3" align="center" color="textPrimary" style={{ flexGrow: 1 }}>
                 MindMap
               </Typography>
+              <Header 
+                activeTab={activeTab} 
+                onTabChange={handleTabChange} 
+                searchTerm={searchTerm} 
+                onSearch={handleSearch} 
+              />
             </div>
             {renderSecondarySidebar()}
             <MainRoutes />

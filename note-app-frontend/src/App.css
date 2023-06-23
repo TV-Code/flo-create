@@ -28,6 +28,18 @@
   color: #61dafb;
 }
 
+.createCirclePicker {
+  transform: scale(0.7);
+  position: relative;
+  left: -32.5px;
+}
+
+.editCirclePicker {
+  transform: scale(0.7);
+  position: relative;
+  left: -47.5px;
+}
+
 @keyframes App-logo-spin {
   from {
     transform: rotate(0deg);

@@ -1,9 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';  
 import { useNavigate } from 'react-router-dom'; 
-import { Box, Card, CardContent, Typography, IconButton, Snackbar } from '@mui/material';  
-import EditIcon from '@mui/icons-material/Edit';
-import DeleteIcon from '@mui/icons-material/Delete';
+import { Box, Snackbar } from '@mui/material';
+import NoteCard from './NoteCard';
 import MuiAlert from '@mui/material/Alert';
 
 const NoteList = ({ deleteNote, setCurrentNote }) => {  
@@ -49,24 +48,7 @@ const NoteList = ({ deleteNote, setCurrentNote }) => {
   return (  
     <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
       {notes.map(note => (
-        <Card key={note.id} sx={{ minWidth: 275 }}>
-          <CardContent>
-            <Typography variant="h5" component="div">
-              {note.title}
-            </Typography>
-            <Typography variant="body2">
-              {note.body}
-            </Typography>
-            <Box sx={{ mt: 2 }}>
-              <IconButton edge="end" aria-label="edit" onClick={() => handleEdit(note)}>
-                <EditIcon />
-              </IconButton>
-              <IconButton edge="end" aria-label="delete" onClick={() => handleDelete(note.id)}>
-                <DeleteIcon />
-              </IconButton>
-            </Box>
-          </CardContent>
-        </Card>
+        <NoteCard key={note.id} note={note} onEdit={handleEdit} onDelete={handleDelete} />
       ))}
       <Snackbar open={open} autoHideDuration={6000} onClose={handleClose}>
         <MuiAlert onClose={handleClose} severity="success" sx={{ width: '100%' }}>
