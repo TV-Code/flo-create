@@ -1,14 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { Button, TextField, Box, Slider, Select, MenuItem } from '@mui/material';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
+import axios from 'axios';
 
 const TaskForm = ({ currentTask, setCurrentTask, addTask, updateTask, action }) => {
+
   const navigate = useNavigate();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [category_id, setCategory_id] = useState('');
+  const [categories, setCategories] = useState([]);
   const [weight, setWeight] = useState(1);  // default weight to 1
   const [status, setStatus] = useState(0);  // default status to 0%
+  const { categoryId } = useParams();
 
   const serializedCurrentTask = JSON.stringify(currentTask);
 
@@ -22,6 +26,15 @@ const TaskForm = ({ currentTask, setCurrentTask, addTask, updateTask, action }) 
     }
   }, [currentTask, serializedCurrentTask]);
   
+  useEffect(() => {
+    axios.get('http://127.0.0.1:5000/categories')
+        .then(response => {
+            setCategories(response.data);
+        })
+        .catch(error => {
+            console.error('There was an error fetching categories')
+        })
+  }, [])
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -34,13 +47,13 @@ const TaskForm = ({ currentTask, setCurrentTask, addTask, updateTask, action }) 
     };
 
     if (action === 'new') {
-      addTask(task);
+      addTask(task, categoryId);
     } else if (action === 'edit') {
       task.id = currentTask.id;
       updateTask(task);
     }
 
-    navigate('/tasks'); // redirect to tasks view
+    navigate('/tasks');
   };
 
   const handleCancel = () => {
@@ -64,12 +77,18 @@ const TaskForm = ({ currentTask, setCurrentTask, addTask, updateTask, action }) 
         multiline
         rows={4}
       />
-      <TextField
+      <Select
         label="Category"
         value={category_id}
         onChange={(e) => setCategory_id(e.target.value)}
         fullWidth
-      />
+        >
+        {categories.map((category) => (
+            <MenuItem key={category.id} value={category.id}>
+            {category.name}
+            </MenuItem>
+        ))}
+        </Select>
       <Select
         label="Weight"
         value={weight}
@@ -87,11 +106,12 @@ const TaskForm = ({ currentTask, setCurrentTask, addTask, updateTask, action }) 
         value={status}
         onChange={(e, value) => setStatus(value)}
         valueLabelDisplay="auto"
-        step={1}
+        valueLabelFormat={(value) => `${value * 100}%`}
+        step={0.01}
         marks
         min={0}
-        max={100}
-      />
+        max={1}
+        />
       <Button type="submit" variant="contained" color="primary">
         {action === 'new' ? 'Add' : 'Update'} Task
       </Button>

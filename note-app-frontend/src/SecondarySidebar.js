@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import './App.css';
 import {
     Drawer, List, ListItem, ListItemText,
@@ -26,6 +27,7 @@ function SecondarySidebar({ isDrawerOpen, toggleDrawer, onCategorySelect }) {
     const [editMode, setEditMode] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
     const circlePickerRef = useRef(null);
+    const navigate = useNavigate();
 
     useEffect(() => {
         axios.get('http://127.0.0.1:5000/categories')
@@ -41,6 +43,7 @@ function SecondarySidebar({ isDrawerOpen, toggleDrawer, onCategorySelect }) {
     const handleCategorySelect = (category) => {
         setSelectedCategory(category);
         toggleDrawer(false);
+        navigate(`/category/${category.id}`);
     }
 
     const handleOnDragEnd = (result) => {
@@ -172,7 +175,6 @@ function SecondarySidebar({ isDrawerOpen, toggleDrawer, onCategorySelect }) {
                                                     button
                                                     onClick={() => handleCategorySelect(category)}
                                                 >
-                                                {selectedCategory && <CategoryView category={selectedCategory} />}
                                                     <Grid container direction="column">
                                                         <Grid item xs={12}>
                                                             <div style={{ 

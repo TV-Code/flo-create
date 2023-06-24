@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { CssBaseline, Container, Typography, CircularProgress, IconButton } from '@mui/material';
 import MenuIcon from '@mui/icons-material/Menu';
-import { BrowserRouter as Router, Routes, Route, Switch, useParams, useLocation } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, useNavigate, useParams, useLocation } from 'react-router-dom';
+import CategoryContext from './CategoryContext';
 import NoteForm from './NoteForm';
 import NoteList from './NoteList';
 import Sidebar from './Sidebar';
@@ -47,45 +48,14 @@ const App = () => {
   const toggleSecondarySidebar = () => {
     setIsSecondarySidebarOpen(!isSecondarySidebarOpen);
   }
-
-  const handleCategorySelect = (category) => {
-    fetchNotesByCategory(category.id);
-    fetchTasksByCategory(category.id);
-    setIsSecondarySidebarOpen(false);
-  };
   
   const handleTabChange = (event, newValue) => {
-    setActiveTab(event.newValue);
+    setActiveTab(newValue);
   }
 
   const handleSearch = (event) => {
     setSearchTerm(event.target.value);
   }
-
-  const fetchNotesByCategory = async (categoryId) => {
-    setLoading(true);
-    try {
-      const response = await axios.get(`http://127.0.0.1:5000/notes?category_id=${categoryId}`);
-      setNotes(response.data);
-      setLoading(false);
-    } catch (error) {
-      console.error(`There was an error retrieving the notes for the selected category: ${error}`);
-      setLoading(false);
-    }
-  };
-
-  const fetchTasksByCategory = async (categoryId) => {
-    setLoading(true);
-    try {
-      const response = await axios.get(`http://127.0.0.1:5000/tasks?category_id=${categoryId}`);
-      setTasks(response.data);
-      setLoading(false);
-    } catch (error) {
-      console.error(`There was an error retrieving the tasks for the selected category: ${error}`);
-      setLoading(false);
-    }
-  };
-
 
   const fetchNotes = async () => {
     setLoading(true);
@@ -114,8 +84,9 @@ const App = () => {
     }
   };
 
-  const addNote = async (note) => {
+  const addNote = async (note, category_id = null) => {
     setLoading(true);  
+    note.category_id = category_id; // If category_id is not provided, it will be set to null
     try {
       const response = await axios.post('http://127.0.0.1:5000/notes', note);
       setNotes([...notes, response.data.data]);
@@ -177,6 +148,7 @@ const App = () => {
         currentNote={currentNote}
         setCurrentNote={setCurrentNote}
         action='new'
+        selectedCategory={selectedCategory}
       />
     );
   };
@@ -208,16 +180,17 @@ const App = () => {
 };
 
 
-  const addTask = async (task) => {
-    setLoading(true);  
-    try {
-      const response = await axios.post('http://127.0.0.1:5000/tasks', task);
-      setTasks([...tasks, response.data.data]);
-    } catch (error) {
-      console.error('There was an error!', error);
-    } finally {
-      setLoading(false);
-    }
+const addTask = async (task, category_id = null) => {
+  setLoading(true);  
+  task.category_id = category_id; // If category_id is not provided, it will be set to null
+  try {
+    const response = await axios.post('http://127.0.0.1:5000/tasks', task);
+    setTasks([...tasks, response.data.data]);
+  } catch (error) {
+    console.error('There was an error!', error);
+  } finally {
+    setLoading(false);
+  }
 };
 
   const updateTask = async (updatedTask) => {
@@ -231,8 +204,6 @@ const App = () => {
     setLoading(false);
 };
 
-
-
   const NewTaskRoute = () => {
     return (
       <TaskForm
@@ -240,6 +211,7 @@ const App = () => {
         currentTask={currentTask}
         setCurrentTask={setCurrentTask}
         action='new'
+        selectedCategory={selectedCategory}
       />
   );
 };
@@ -277,20 +249,15 @@ const App = () => {
   
   const renderSecondarySidebar = () => {
     const currentPath = window.location.pathname;
-    if (currentPath.startsWith('/notes') || currentPath.startsWith('/tasks')) {
-      return (
+    return (
       <div className="App">
             <SecondarySidebar 
               isDrawerOpen={isSecondarySidebarOpen} 
               toggleDrawer={toggleSecondarySidebar} 
-              onCategorySelect={handleCategorySelect}
              />
-             {selectedCategory && <CategoryView category={selectedCategory} />}
            </div>
       );
-    }
-    return null;
-  };
+    };
 
   const MainRoutes = () => {
     const location = useLocation();
@@ -298,11 +265,12 @@ const App = () => {
     return (
       <Routes>
         <Route path="/notes" element={<NoteList notes={notes} loading={loading} deleteNote={deleteNote} setCurrentNote={setCurrentNote} />} />
-        <Route path="/notes/new" element={location.pathname === "/notes/new" ? <NewNoteRoute /> : null} />
+        <Route path="/notes/new" element={<NoteForm action="new" addNote={addNote} currentCategory={selectedCategory} />} />
         <Route path="/notes/:id" element={<EditNoteRoute />} />
         <Route path="/tasks" element={<Tasks tasks={tasks} />} />
-        <Route path="/tasks/new" element={location.pathname === "/tasks/new" ? <NewTaskRoute /> : null} />
+        <Route path="/tasks/new" element={<TaskForm action="new" addTask={addTask} currentCategory={selectedCategory} />} />
         <Route path="/tasks/:id" element={<EditTaskRoute />} />
+        <Route path="/category/:id" element={<CategoryView setSelectedCategory={setSelectedCategory} selectedCategory={selectedCategory} />} />
         <Route path="/journal" element={<Journal />} />
         <Route path="/chat" element={<Chat />} />
       </Routes>
@@ -310,39 +278,41 @@ const App = () => {
   }
 
   return (
-    <Router>
-      <ThemeProvider theme={theme}>
-        <CssBaseline />
-        <div style={{ display: 'flex', flexDirection: 'row' }}>
-          <div>
-            <Sidebar />
-          </div>
-          <div style={{ flexGrow: 1, overflow: 'hidden', padding: '20px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', marginBottom: '20px' }}>
-              <IconButton
-                edge="start"
-                color="inherit"
-                aria-label="menu"
-                onClick={toggleSecondarySidebar}
-              >
-                <MenuIcon />
-              </IconButton>
-              <Typography variant="h3" align="center" color="textPrimary" style={{ flexGrow: 1 }}>
-                MindMap
-              </Typography>
-              <Header 
-                activeTab={activeTab} 
-                onTabChange={handleTabChange} 
-                searchTerm={searchTerm} 
-                onSearch={handleSearch} 
-              />
+    <CategoryContext.Provider value={{ selectedCategory, setSelectedCategory }}>
+      <Router>
+        <ThemeProvider theme={theme}>
+          <CssBaseline />
+          <div style={{ display: 'flex', flexDirection: 'row' }}>
+            <div>
+              <Sidebar />
             </div>
-            {renderSecondarySidebar()}
-            <MainRoutes />
+            <div style={{ flexGrow: 1, overflow: 'hidden', padding: '20px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', marginBottom: '20px' }}>
+                <IconButton
+                  edge="start"
+                  color="inherit"
+                  aria-label="menu"
+                  onClick={toggleSecondarySidebar}
+                >
+                  <MenuIcon />
+                </IconButton>
+                <Typography variant="h3" align="center" color="textPrimary" style={{ flexGrow: 1 }}>
+                  MindMap
+                </Typography>
+                <Header 
+                  activeTab={activeTab} 
+                  onTabChange={handleTabChange} 
+                  searchTerm={searchTerm} 
+                  onSearch={handleSearch} 
+                />
+              </div>
+              {renderSecondarySidebar()}
+              <MainRoutes />
+            </div>
           </div>
-        </div>
-      </ThemeProvider>
-    </Router>
+        </ThemeProvider>
+      </Router>
+      </CategoryContext.Provider>
   );
 };
 

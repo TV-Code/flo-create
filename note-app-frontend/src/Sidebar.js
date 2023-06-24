@@ -39,7 +39,10 @@ function Sidebar() {
   return (
     <List style={styles.sidebar}>
       <ListItem>
-        <IconButton component={Link} to={addLink} color="inherit">
+      <IconButton component={Link} to="/notes/new" color="inherit">
+          <AddCircleIcon fontSize="large" />
+        </IconButton>
+        <IconButton component={Link} to="/tasks/new" color="inherit">
           <AddCircleIcon fontSize="large" />
         </IconButton>
       </ListItem>

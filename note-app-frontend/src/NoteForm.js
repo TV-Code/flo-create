@@ -1,17 +1,55 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { TextField, Button, Box, Snackbar, IconButton } from '@mui/material';
+import { TextField, Button, Box, Snackbar, IconButton, Select, MenuItem } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
+import CategoryContext from './CategoryContext';
 
 const NoteForm = ({ addNote, updateNote, currentNote, setCurrentNote, action }) => {
   const [title, setTitle] = useState(currentNote ? currentNote.title : '');
   const [body, setBody] = useState(currentNote ? currentNote.body : '');
-  const [category_id, setCategory_id] = useState(currentNote ? currentNote.category_id : '');
+  const { categoryId: urlCategoryId } = useParams();
+  const { selectedCategory } = useContext(CategoryContext);
+  const [categories, setCategories] = useState([]);
+  const [category_id, setCategory_id] = useState('');
+  const [loadingCategories, setLoadingCategories] = useState(true);
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
   const { id } = useParams();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const fetchCategories = async () => {
+      setLoadingCategories(true);
+      try {
+        const response = await axios.get('http://127.0.0.1:5000/categories');
+        setCategories(response.data);
+        if (urlCategoryId || selectedCategory) {
+          const currentCategory = response.data.find(cat => cat.id === urlCategoryId) || selectedCategory;
+          setCategory_id(currentCategory.id);
+        }
+      } catch (error) {
+        console.error('There was an error fetching categories', error);
+      } finally {
+        setLoadingCategories(false);
+      }
+    };
+
+    fetchCategories();
+  }, [urlCategoryId, selectedCategory]);
+
+  useEffect(() => {
+    if (categories.length) {
+      if (currentNote) {
+        setCategory_id(currentNote.category_id);
+      } else if (urlCategoryId || selectedCategory) {
+        const categoryFromUrl = categories.find(cat => cat.id === urlCategoryId);
+        const category = categoryFromUrl || selectedCategory;
+        setCategory_id(category ? category.id : '');
+      }
+    }
+}, [categories, urlCategoryId, selectedCategory, currentNote]);
+
 
   useEffect(() => {
     if (currentNote) {
@@ -21,7 +59,6 @@ const NoteForm = ({ addNote, updateNote, currentNote, setCurrentNote, action }) 
     } else {
       setTitle('');
       setBody('');
-      setCategory_id('');
     }
   }, [currentNote]);
 
@@ -82,14 +119,21 @@ const NoteForm = ({ addNote, updateNote, currentNote, setCurrentNote, action }) 
         rows={4}
         sx={{ mb: 1 }}
       />
-      <TextField
-        fullWidth
-        label="Category"
-        value={category_id}
-        onChange={e => setCategory_id(e.target.value)}
-        variant="outlined"
-        sx={{ mb: 1}}
-      />
+      {!loadingCategories && (
+        <Select
+          label="Category"
+          value={category_id || ''}
+          onChange={(e) => setCategory_id(e.target.value)}
+          fullWidth
+        >
+          {categories.map((category) => (
+            <MenuItem key={category.id} value={category.id}>
+              {category.name}
+            </MenuItem>
+          ))}
+        </Select>
+      
+      )}
       <Button variant="contained" color="primary" type="submit" disabled={loading}>
         {loading ? 'Loading...' : 'Save'}
       </Button>
