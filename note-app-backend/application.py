@@ -1,9 +1,9 @@
+import uuid
 from flask import Flask, jsonify, request, render_template
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from datetime import datetime
 from flask_cors import CORS
-import uuid
 
 db = SQLAlchemy()
 migrate = Migrate()
@@ -17,7 +17,9 @@ def create_app():
     migrate.init_app(app, db)
 
     class Category(db.Model):
-        id = db.Column(db.Integer, primary_key=True)
+        __tablename__ = 'category'
+        __table_args__ = {'extend_existing': True}
+        id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
         name = db.Column(db.String(50), nullable=False)
         color = db.Column(db.String(20), nullable=False)
 
@@ -32,7 +34,7 @@ def create_app():
         __tablename__ = 'note'
         __table_args__ = {'extend_existing': True}
         id = db.Column(db.String, primary_key=True, default=lambda: str(uuid.uuid4()))
-        category_id = db.Column(db.Integer, db.ForeignKey('category.id'))
+        category_id = db.Column(db.String(36), db.ForeignKey('category.id'))
         title = db.Column(db.String(120), nullable=False)
         tags = db.Column(db.String(120), nullable=True)
         body = db.Column(db.String(500), nullable=False)
@@ -54,7 +56,7 @@ def create_app():
         __tablename__ = 'task'
         __table_args__ = {'extend_existing': True} 
         id = db.Column(db.String, primary_key=True, default=lambda: str(uuid.uuid4()))
-        category_id = db.Column(db.Integer, db.ForeignKey('category.id'))
+        category_id = db.Column(db.String(36), db.ForeignKey('category.id'))
         title = db.Column(db.String(120), nullable=False)
         description = db.Column(db.String(500), nullable=True)
         status = db.Column(db.String(120), nullable=False, default="Not Started")
@@ -81,9 +83,52 @@ def create_app():
     def home():
         return render_template('index.html')
 
+    @app.route('/categories', methods=['GET'])
+    def get_categories():
+        categories = Category.query.all()
+        response = jsonify([category.to_dict() for category in categories]), 200
+        return response
+
+    @app.route('/categories/<id>', methods=['GET'])
+    def get_category(id):
+        category = Category.query.get_or_404(id)
+        return jsonify(category.to_dict()), 200
+
+    @app.route('/categories', methods=['POST'])
+    def create_category():
+        data = request.get_json()
+        if not data or 'name' not in data or 'color' not in data:
+            return jsonify({"status": "error", "message": "Missing required data"}), 400
+        category = Category(name=data['name'], color=data['color'])
+        db.session.add(category)
+        db.session.commit()
+        return jsonify({"status": "success", "message": "Category created", "data": category.to_dict()}), 201
+
+    @app.route('/categories/<id>', methods=['PUT'])
+    def update_category(id):
+        category = Category.query.get_or_404(id)
+        data = request.get_json()
+        if 'name' in data:
+            category.name = data['name']
+        if 'color' in data:
+            category.color = data['color']
+        db.session.commit()
+        return jsonify({"status": "success", "message": "Category updated", "data": category.to_dict()}), 200
+
+    @app.route('/categories/<id>', methods=['DELETE'])
+    def delete_category(id):
+        category = Category.query.get_or_404(id)
+        db.session.delete(category)
+        db.session.commit()
+        return jsonify({"status": "success", "message": "Category deleted"}), 200
+
     @app.route('/notes', methods=['GET'])
     def get_notes():
-        notes = Note.query.all()
+        category_id = request.args.get('category_id')
+        if category_id:
+            notes = Note.query.filter_by(category_id=category_id).all()
+        else:
+            notes = Note.query.all()
         response = jsonify([note.to_dict() for note in notes]), 200
         return response
 
@@ -95,10 +140,10 @@ def create_app():
     @app.route('/notes', methods=['POST'])
     def create_note():
         data = request.get_json()
-        if not data or 'title' not in data or 'body' not in data:
+        if not data or 'title' not in data or 'body' not in data or 'category_id' not in data:
             return jsonify({"status": "error", "message": "Missing required data"}), 400
         tags = ','.join(data.get('tags', []))
-        note = Note(title=data['title'], tags=tags, body=data['body'])
+        note = Note(title=data['title'], tags=tags, body=data['body'], category_id=data['category_id'])
         db.session.add(note)
         db.session.commit()
         return jsonify({"status": "success", "message": "Note created", "data": {"noteId": note.id}}), 201
@@ -127,9 +172,14 @@ def create_app():
 
     @app.route('/tasks', methods=['GET'])
     def get_tasks():
-        tasks = Task.query.all()
+        category_id = request.args.get('category_id')
+        if category_id:
+            tasks = Task.query.filter_by(category_id=category_id).all()
+        else:
+            tasks = Task.query.all()
         response = jsonify([task.to_dict() for task in tasks]), 200
         return response
+
 
     @app.route('/tasks/<id>', methods=['GET'])
     def get_task(id):
@@ -139,9 +189,9 @@ def create_app():
     @app.route('/tasks', methods=['POST'])
     def create_task():
         data = request.get_json()
-        if not data or 'title' not in data or 'description' not in data:
+        if not data or 'title' not in data or 'description' not in data or 'category_id' not in data:
             return jsonify({"status": "error", "message": "Missing required data"}), 400
-        task = Task(title=data['title'], description=data['description'], status=data.get('status', 'Not Started'), weight=data.get('weight', 1))
+        task = Task(title=data['title'], description=data['description'], category_id=data['category_id'], status=data.get('status', 'Not Started'), weight=data.get('weight', 1))
         db.session.add(task)
         db.session.commit()
         return jsonify({"status": "success", "message": "Task created", "data": {"taskId": task.id}}), 201
