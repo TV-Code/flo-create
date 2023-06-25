@@ -7,7 +7,7 @@ function Header({ activeTab, onTabChange, searchTerm, onSearch }) {
 
     const showHeader = !location.pathname.includes('/notes/') && !location.pathname.includes('/tasks/');
 
-    if(!showHeader) return null;
+    if(showHeader) return null;
 
     return (
         <div style={{ display: 'flex', justifyContent: 'space-between' }}>

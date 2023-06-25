@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { Button, TextField, Box, Slider, Select, MenuItem } from '@mui/material';
 import { useNavigate, useParams } from 'react-router-dom';
 import axios from 'axios';
+import CategoryContext from './CategoryContext';
 
 const TaskForm = ({ currentTask, setCurrentTask, addTask, updateTask, action }) => {
 
@@ -9,6 +10,7 @@ const TaskForm = ({ currentTask, setCurrentTask, addTask, updateTask, action }) 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [category_id, setCategory_id] = useState('');
+  const { selectedCategory } = useContext(CategoryContext);
   const [category_name, setCategory_name] = useState('');
   const [categories, setCategories] = useState([]);
   const [weight, setWeight] = useState(1);  // default weight to 1
@@ -52,6 +54,12 @@ const TaskForm = ({ currentTask, setCurrentTask, addTask, updateTask, action }) 
       }
     }
   }, [categories, currentTask]);
+
+  useEffect(() => {
+    if (action === 'new' && selectedCategory) {
+      setCategory_id(selectedCategory.id); // Set to selected category as default
+    }
+  }, [selectedCategory, action]);
 
   const handleSubmit = async (event) => {
     event.preventDefault();

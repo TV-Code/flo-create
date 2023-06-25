@@ -62,6 +62,12 @@ const NoteForm = ({ addNote, updateNote, currentNote, setCurrentNote, action }) 
     }
   }, [currentNote]);
 
+  useEffect(() => {
+    if (action === 'new' && selectedCategory) {
+      setCategory_id(selectedCategory.id); // Set to selected category as default
+    }
+  }, [selectedCategory, action]);
+
   const handleSubmit = async (event) => {
     event.preventDefault();
     setLoading(true);
