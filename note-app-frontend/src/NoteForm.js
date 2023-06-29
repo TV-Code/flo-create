@@ -1,15 +1,15 @@
 import React, { useState, useEffect, useContext } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import axios from 'axios';
-import { TextField, Button, Box, Snackbar, IconButton, Select, MenuItem } from '@mui/material';
+import { TextField, Button, Box, Select, MenuItem, Snackbar, IconButton } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
+import axios from 'axios';
 import CategoryContext from './CategoryContext';
 
-const NoteForm = ({ addNote, updateNote, currentNote, setCurrentNote, action }) => {
-  const [title, setTitle] = useState(currentNote ? currentNote.title : '');
-  const [body, setBody] = useState(currentNote ? currentNote.body : '');
+const NoteForm = ({ currentNote, setCurrentNote, addNote, updateNote, action }) => {
+  const [title, setTitle] = useState(currentNote?.title || '');
+  const [body, setBody] = useState(currentNote?.body || '');
   const { categoryId: urlCategoryId } = useParams();
-  const { selectedCategory } = useContext(CategoryContext);
+  const { selectedCategory, setSelectedCategory } = useContext(CategoryContext);
   const [categories, setCategories] = useState([]);
   const [category_id, setCategory_id] = useState('');
   const [loadingCategories, setLoadingCategories] = useState(true);
@@ -17,6 +17,7 @@ const NoteForm = ({ addNote, updateNote, currentNote, setCurrentNote, action }) 
   const [open, setOpen] = useState(false);
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
 
   useEffect(() => {
     const fetchCategories = async () => {
@@ -24,9 +25,10 @@ const NoteForm = ({ addNote, updateNote, currentNote, setCurrentNote, action }) 
       try {
         const response = await axios.get('http://127.0.0.1:5000/categories');
         setCategories(response.data);
-        if (urlCategoryId || selectedCategory) {
-          const currentCategory = response.data.find(cat => cat.id === urlCategoryId) || selectedCategory;
-          setCategory_id(currentCategory.id);
+        if (location.state && location.state.selectedCategory && action === 'new') {
+          setCategory_id(location.state.selectedCategory);
+        } else if (currentNote && action === 'edit') {
+          setCategory_id(currentNote.category_id);
         }
       } catch (error) {
         console.error('There was an error fetching categories', error);
@@ -34,68 +36,58 @@ const NoteForm = ({ addNote, updateNote, currentNote, setCurrentNote, action }) 
         setLoadingCategories(false);
       }
     };
-
+  
     fetchCategories();
-  }, [urlCategoryId, selectedCategory]);
-
-  useEffect(() => {
-    if (categories.length) {
-      if (currentNote) {
-        setCategory_id(currentNote.category_id);
-      } else if (urlCategoryId || selectedCategory) {
-        const categoryFromUrl = categories.find(cat => cat.id === urlCategoryId);
-        const category = categoryFromUrl || selectedCategory;
-        setCategory_id(category ? category.id : '');
-      }
-    }
-}, [categories, urlCategoryId, selectedCategory, currentNote]);
-
-
-  useEffect(() => {
-    if (currentNote) {
-      setTitle(currentNote.title);
-      setBody(currentNote.body);
-      setCategory_id(currentNote.category_id);
-    } else {
-      setTitle('');
-      setBody('');
-    }
-  }, [currentNote]);
+  }, [urlCategoryId, currentNote, action, location.state]);
+  
 
   useEffect(() => {
     if (action === 'new' && selectedCategory) {
-      setCategory_id(selectedCategory.id); // Set to selected category as default
+      setCategory_id(selectedCategory.id);
     }
-  }, [selectedCategory, action]);
+  }, [selectedCategory, action]);  
+
+  useEffect(() => {
+    console.log('currentNote', currentNote);
+
+    if (currentNote) {
+      setTitle(currentNote.title);
+      setBody(currentNote.body);
+      setCategory_id(currentNote ? currentNote.category_id : '');
+    } else {
+      setTitle('');
+      setBody('');
+      setCategory_id(null); // set category_id to null when there is no current note
+    }
+  }, [currentNote]);
+
 
   const handleSubmit = async (event) => {
     event.preventDefault();
     setLoading(true);
-
-    const note = { title, body, category_id };
-    
-    if (action === 'edit') {
-        try {
-          const response = await axios.put(`http://127.0.0.1:5000/notes/${id}`, note);
-          updateNote(response.data.data);
-          setCurrentNote(null);
-        } catch (error) {
-          console.error('There was an error!', error);
-        }
-      } else if (action === 'new') {
-        try {
-          const response = await axios.post('http://127.0.0.1:5000/notes', note);
-          addNote(response.data.data);
-          setCurrentNote(null);
-        } catch (error) {
-          console.error('There was an error!', error);
-        }
-      }
   
+    const note = { id, title, body, category_id: category_id.toString() };
+    
+    try {
+      if (action === 'edit') {
+        updateNote(note);
+      } else if (action === 'new') {
+        addNote(note, category_id); // calling the addNote function passed as prop
+      }
+    } catch (error) {
+      console.error('There was an error!', error);
+    } finally {
+      setCurrentNote(null);
       setLoading(false);
       setOpen(true);
-      navigate('/notes');
-    };
+      navigate(-1);
+    }
+  };
+
+
+  const handleCancel = () => {
+    navigate(-1);
+  };
 
   const handleClose = (event, reason) => {
     if (reason === 'clickaway') {
@@ -105,31 +97,39 @@ const NoteForm = ({ addNote, updateNote, currentNote, setCurrentNote, action }) 
     setOpen(false);
   };
 
+  const handleCategoryChange = (event) => {
+    setCategory_id(event.target.value);
+  };
+  
+
   return (
-    <Box component="form" onSubmit={handleSubmit} sx={{ mt: 1 }}>
+    <Box component="form" onSubmit={handleSubmit}>
+      <Box mb={2}>
       <TextField
-        fullWidth
         label="Title"
         value={title}
-        onChange={e => setTitle(e.target.value)}
-        variant="outlined"
-        sx={{ mb: 1 }}
-      />
-      <TextField
+        onChange={(e) => setTitle(e.target.value)}
         fullWidth
+        required
+        autoComplete="off"
+      />
+      </Box>
+      <Box mb={2}>
+      <TextField
         label="Body"
         value={body}
-        onChange={e => setBody(e.target.value)}
-        variant="outlined"
+        onChange={(e) => setBody(e.target.value)}
+        fullWidth
         multiline
         rows={4}
-        sx={{ mb: 1 }}
+        autoComplete="off"
       />
-      {!loadingCategories && (
+      </Box>
+      <Box mb={2}>
         <Select
           label="Category"
           value={category_id || ''}
-          onChange={(e) => setCategory_id(e.target.value)}
+          onChange={handleCategoryChange}
           fullWidth
         >
           {categories.map((category) => (
@@ -138,11 +138,17 @@ const NoteForm = ({ addNote, updateNote, currentNote, setCurrentNote, action }) 
             </MenuItem>
           ))}
         </Select>
-      
-      )}
-      <Button variant="contained" color="primary" type="submit" disabled={loading}>
-        {loading ? 'Loading...' : 'Save'}
+        </Box>
+        <Box mb={2}>
+      <Button type="submit" variant="contained" color="primary" disabled={loading}>
+        {loading ? 'Loading...' : (action === 'new' ? 'Add Note' : 'Update Note')}
       </Button>
+      </Box>
+      <Box mb={1}>
+      <Button type="button" variant="contained" color="#8c7851" disabled={loading} onClick={handleCancel}>
+        Cancel
+      </Button>
+      </Box>
       <Snackbar
         anchorOrigin={{
           vertical: 'bottom',

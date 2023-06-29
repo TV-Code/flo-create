@@ -1,3 +1,9 @@
+@import url('https://fonts.googleapis.com/css2?family=Lora&display=swap');
+
+body {
+  font-family: 'Lora', serif;
+}
+
 .App {
   text-align: center;
 }
@@ -27,6 +33,16 @@
 .App-link {
   color: #61dafb;
 }
+
+.app-bar {
+  position: fixed;
+  top: 200px;
+  left: 200px;
+  width: calc(100% - 200px);
+  z-index: 999;
+  background-color: darkolivegreen;
+}
+
 
 .createCirclePicker {
   transform: scale(0.7);

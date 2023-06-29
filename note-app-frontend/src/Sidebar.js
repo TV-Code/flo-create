@@ -1,16 +1,17 @@
-import React from 'react';
-import { useLocation, Link } from 'react-router-dom';
+import React, { useContext } from 'react';
+import { useLocation, useNavigate, Link } from 'react-router-dom';
 import { List, ListItem, ListItemIcon, ListItemText, IconButton } from '@mui/material';
 import NotesIcon from '@mui/icons-material/Notes';
 import TaskIcon from '@mui/icons-material/Task';
 import BookIcon from '@mui/icons-material/Book';
 import ChatIcon from '@mui/icons-material/Chat';
 import AddCircleIcon from '@mui/icons-material/AddCircle';
+import CategoryContext from './CategoryContext';
 
 const styles = {
   sidebar: {
-    background: '#333',
-    color: '#fff',
+    background: '#716040',
+    color: '#eaddcf',
     padding: '20px',
     height: '100vh',
     minWidth: '200px',
@@ -22,12 +23,14 @@ const styles = {
     },
   },
   active: {
-    background: '#444',
+    background: '#8c7851',
   },
 };
 
 function Sidebar() {
   const location = useLocation();
+  const navigate = useNavigate();
+  const { selectedCategory, setSelectedCategory } = useContext(CategoryContext);
   let addLink = '/';
 
   if (location.pathname.startsWith('/notes')) {
@@ -36,13 +39,17 @@ function Sidebar() {
     addLink = '/tasks/new';
   }
 
+  const handleAddTask = () => {
+    navigate('/tasks/new', { state: { selectedCategory } });
+  };  
+
   return (
     <List style={styles.sidebar}>
       <ListItem>
       <IconButton component={Link} to="/notes/new" color="inherit">
           <AddCircleIcon fontSize="large" />
         </IconButton>
-        <IconButton component={Link} to="/tasks/new" color="inherit">
+        <IconButton onClick={() => handleAddTask()} color="inherit">
           <AddCircleIcon fontSize="large" />
         </IconButton>
       </ListItem>

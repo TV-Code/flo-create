@@ -14,12 +14,10 @@ import SaveIcon from '@mui/icons-material/Save';
 import SearchIcon from '@mui/icons-material/Search';
 import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
 import axios from 'axios';
-import CategoryView from './CategoryView';
 
 function SecondarySidebar({ isDrawerOpen, toggleDrawer, onCategorySelect }) {
     const [categories, setCategories] = useState([]);
     const [newCategory, setNewCategory] = useState('');
-    const [selectedCategory, setSelectedCategory] = useState(null);
     const [isCirclePickerVisible, setIsCirclePickerVisible] = useState(false);
     const [newCategoryColor, setNewCategoryColor] = useState('#ffffff');
     const [editedCategoryColor, setEditedCategoryColor] = useState('#ffffff');
@@ -41,7 +39,7 @@ function SecondarySidebar({ isDrawerOpen, toggleDrawer, onCategorySelect }) {
     }, []);
 
     const handleCategorySelect = (category) => {
-        setSelectedCategory(category);
+        onCategorySelect(category);
         toggleDrawer(false);
         navigate(`/category/${category.id}`);
     }
@@ -116,13 +114,14 @@ function SecondarySidebar({ isDrawerOpen, toggleDrawer, onCategorySelect }) {
     return (
         <div>
             <Drawer anchor="left" open={isDrawerOpen} onClose={() => toggleDrawer(false)}>
-                <div style={{ padding: '10px', width: 200 }}>
+                <div style={{ padding: '10px', height: '100%', width: 200, backgroundColor: '#f9f4ef' }}>
                 <TextField
                     label="Search"
                     variant="standard"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     fullWidth
+                    autoComplete="off"
                     InputProps={{
                     endAdornment: (
                         <InputAdornment position="end">
@@ -146,6 +145,7 @@ function SecondarySidebar({ isDrawerOpen, toggleDrawer, onCategorySelect }) {
                             }, 100);
                         }}
                         fullWidth
+                        autoComplete="off"
                     />
                     <div ref={circlePickerRef}>
                         {isCirclePickerVisible && newCategoryColor && (
@@ -189,6 +189,7 @@ function SecondarySidebar({ isDrawerOpen, toggleDrawer, onCategorySelect }) {
                                                                     <TextField
                                                                         value={editedCategoryName}
                                                                         onChange={(e) => setEditedCategoryName(e.target.value)}
+                                                                        autoComplete="off"
                                                                     />
                                                                     </Grid>
                                                                     <CirclePicker
