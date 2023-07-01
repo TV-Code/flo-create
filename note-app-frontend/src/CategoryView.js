@@ -2,86 +2,89 @@ import React, { useState, useContext, useEffect, useMemo } from 'react';
 import { useParams } from 'react-router-dom';
 import axios from 'axios';
 import CategoryContext from './CategoryContext';
+import { useSearch } from './SearchContext';
 import NoteList from './NoteList';
 import TaskList from './TaskList';
+import JournalList from './JournalList';
+import MixedList from './MixedList';
 import Header from './Header';
 import { alpha } from '@mui/system';
 import { Box, Typography, LinearProgress } from '@mui/material';
+import { useFetchNotes, useFetchTasks, useFetchJournals, sortMixedData } from './CustomHooks';
 
-const CategoryView = ({ filteredNotes, filteredTasks }) => {
+const CategoryView = ({ activeTab, setActiveTab, sortCriteria, setSortCriteria, deleteItem }) => {
   const { id } = useParams();
-  const [activeTab, setActiveTab] = useState(2); // Default to 'All'
   const [category, setCategory] = useState(null);
   const [categoryColor, setCategoryColor] = useState('default');
   const [lightenedColor, setLightenedColor] = useState('default');
-  const [notes, setNotes] = useState([]);
-  const [tasks, setTasks] = useState([]);
-  const [loading, setLoading] = useState(false);
   const { setSelectedCategory } = useContext(CategoryContext);
+  const { searchTerm, setSearchTerm } = useSearch();
   const [progress, setProgress] = useState(0);
+  const [apiType, setApiType] = useState('');
 
-  const loadData = () => {
-    setLoading(true);
-    axios.get(`http://127.0.0.1:5000/categories/${id}`)
-    .then((response) => {
-      setSelectedCategory(id);
-      setCategory(response.data);
-      setCategoryColor(response.data.color);
-      setLightenedColor(alpha(response.data.color, 1 - 0.6));
-    })
-    .catch(error => {
-      console.error(`There was an error: ${error}`);
-      setLoading(false);
-    });
-
+  useEffect(() => {
     switch (activeTab) {
-      case 0: // Load notes
-        axios.get(`http://127.0.0.1:5000/notes?category_id=${id}`)
-        .then((response) => {
-          setNotes(response.data);
-          setLoading(false);
-        })
-        .catch(error => {
-          console.error(`There was an error: ${error}`);
-          setLoading(false);
-        });
+      case 0:
+        setApiType('notes');
         break;
-      case 1: // Load tasks
-        axios.get(`http://127.0.0.1:5000/tasks?category_id=${id}`)
-        .then((response) => {
-          setTasks(response.data);
-          setLoading(false);
-        })
-        .catch(error => {
-          console.error(`There was an error: ${error}`);
-          setLoading(false);
-        });
+      case 1:
+        setApiType('tasks');
         break;
-      case 2: // Load both notes and tasks
+      case 2:
+        setApiType('journals');
+        break;
       default:
-        axios.all([
-          axios.get(`http://127.0.0.1:5000/notes?category_id=${id}`),
-          axios.get(`http://127.0.0.1:5000/tasks?category_id=${id}`)
-        ])
-        .then(axios.spread((notesResponse, tasksResponse) => {
-          setNotes(notesResponse.data);
-          setTasks(tasksResponse.data);
-          setLoading(false);
-        }))
-        .catch(error => {
-          console.error(`There was an error: ${error}`);
-          setLoading(false);
-        });
-        break;
+        setApiType('all');
+    }
+  }, [activeTab]);
+
+  const { notes, fetchNotes } = useFetchNotes(id, searchTerm, sortCriteria, apiType);
+  const { tasks, fetchTasks } = useFetchTasks(id, searchTerm, sortCriteria, apiType);
+  const { journals, fetchJournals } = useFetchJournals(id, searchTerm, sortCriteria, apiType);
+
+  useEffect(() => {
+    axios.get(`http://127.0.0.1:5000/categories/${id}`)
+      .then((response) => {
+        setSelectedCategory(id);
+        setCategory(response.data);
+        setCategoryColor(response.data.color);
+        setLightenedColor(alpha(response.data.color, 1 - 0.6));
+      })
+      .catch(error => console.error(`There was an error: ${error}`));
+
+    fetchNotes();
+    fetchTasks();
+    fetchJournals();
+  }, [id, searchTerm, fetchNotes, fetchTasks, fetchJournals]);
+
+  const prepareMixedListData = () => {
+    // Combine notes, tasks, and journals
+    const mixedData = [...notes, ...tasks, ...journals];
+  
+    // Sort the mixed data
+    const sortedMixedData = sortMixedData(mixedData, sortCriteria);
+  
+    return sortedMixedData;
+  };
+  
+
+  const renderTabContent = () => {
+    switch (activeTab) {
+      case 0:
+        return <NoteList notes={notes} />;
+      case 1:
+        return <TaskList tasks={tasks} categoryColor={categoryColor} lightenedColor={lightenedColor} showProgressBar={false} />;
+      case 2:
+        return <JournalList journals={journals} />;
+      case 3:
+      default:
+        const mixedListData = prepareMixedListData();
+        return <MixedList data={mixedListData} categoryColor={categoryColor} lightenedColor={lightenedColor} deleteItem={deleteItem} />
     }
   };
 
-  useEffect(() => {
-    loadData();
-  }, [id, activeTab]);
-
   const progressValue = useMemo(() => {
-    const totalWeightedProgress = tasks.reduce((total, task) => total + (task.status * task.weight), 0);
+    const totalWeightedProgress = tasks.reduce((total, task) => total + (task.progress * task.weight), 0);
     const totalPossibleWeight = tasks.reduce((total, task) => total + (100 * task.weight), 0);
     return totalPossibleWeight > 0 ? (totalWeightedProgress / totalPossibleWeight) * 100 : 0;
   }, [tasks]);
@@ -92,26 +95,10 @@ const CategoryView = ({ filteredNotes, filteredTasks }) => {
 
   const handleTabChange = (event, newValue) => {
     setActiveTab(newValue);
-    loadData();
+    setSortCriteria('default');
+    setSearchTerm('');
   };
-
-  const renderTabContent = () => {
-    switch (activeTab) {
-      case 0:
-        return <NoteList notes={filteredNotes} loading={loading} />;
-      case 1:
-        return <TaskList tasks={filteredTasks} loading={loading} categoryColor={categoryColor} lightenedColor={lightenedColor} showProgressBar={false} />
-      case 2:
-      default:
-        return (
-          <>
-            <NoteList notes={filteredNotes} loading={loading} />
-            <TaskList tasks={filteredTasks} loading={loading} categoryColor={categoryColor} lightenedColor={lightenedColor} showProgressBar={false} />
-          </>
-        );
-    }
-  };
-
+  
   const shouldDisplayProgress = activeTab === 1;
 
   return (
@@ -121,34 +108,32 @@ const CategoryView = ({ filteredNotes, filteredTasks }) => {
         <Typography variant="h4" component="div">
           {category ? category.name : "Loading..."}
         </Typography>
-        {loading ? "Loading..." : 
-          <>
-            {shouldDisplayProgress && 
-              <>
-                <LinearProgress 
-                  variant="determinate" 
-                  value={progress} 
-                  sx={{
-                    height: 7,
+        <>
+          {shouldDisplayProgress && (
+            <>
+              <LinearProgress 
+                variant="determinate" 
+                value={progress} 
+                sx={{
+                  height: 7,
+                  borderRadius: 5,
+                  bgcolor: lightenedColor,
+                  '& .MuiLinearProgress-bar': {
                     borderRadius: 5,
-                    bgcolor: lightenedColor,
-                    '& .MuiLinearProgress-bar': {
-                      borderRadius: 5,
-                      backgroundColor: categoryColor,
-                    },
-                  }}
-                />
-                <Typography variant="body1" component="div">
-                  {`${Math.round(progress)}% of total progress completed`}
-                </Typography>
-              </>
-            }
-            {renderTabContent()}
-          </>
-        }
+                    backgroundColor: categoryColor,
+                  },
+                }}
+              />
+              <Typography variant="body1" component="div">
+                {`${Math.round(progress)}% of total progress completed`}
+              </Typography>
+            </>
+          )}
+          {renderTabContent()}
+        </>
       </Box>
     </>
   );  
-};  
+};
 
 export default CategoryView;

@@ -3,7 +3,7 @@ import { useLocation } from 'react-router-dom';
 
 const Header = ({ activeTab, onTabChange }) => {
     const location = useLocation();
-    const showHeader = !location.pathname.includes('/notes') && !location.pathname.includes('/tasks');
+    const showHeader = !location.pathname.includes('/notes') && !location.pathname.includes('/tasks') && !location.pathname.includes('/journals');
 
     if(!showHeader) return null;
 
@@ -12,6 +12,7 @@ const Header = ({ activeTab, onTabChange }) => {
             <Tabs value={activeTab} onChange={onTabChange}>
                 <Tab label="Notes" />
                 <Tab label="Tasks" />
+                <Tab label="Journals" />
                 <Tab label="All" />
             </Tabs>
         </div>

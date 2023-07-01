@@ -20,6 +20,13 @@ const TaskCard = ({ task, onEdit, onDelete, categoryColor, lightenedColor, expan
   const isExpanded = expandedTask === task.id;
   const displayDescription = isExpanded ? task.description : `${task.description.substring(0, maxLength)}${readMore ? '...' : ''}`;
 
+  // Calculate status based on task progress
+  const taskStatus = task.progress === 0 
+    ? "Not Started" 
+    : task.progress < 100 
+    ? "In Progress" 
+    : "Completed";
+
   return (
     <Card sx={{ minWidth: 275, maxWidth: 500, mb: 2, backgroundColor: '#eaddcf' }}>
       <CardContent>
@@ -50,13 +57,16 @@ const TaskCard = ({ task, onEdit, onDelete, categoryColor, lightenedColor, expan
         <Typography variant="body2">
           Weight: {task.weight}
         </Typography>
+        <Typography variant="body2">
+          Status: {taskStatus}
+        </Typography>
         <Box sx={{ width: '100%', mt: 2 }}>
           <Typography variant="body2" color="text.secondary">
-            Status: {task.status}%
+            Progress: {task.progress}%
           </Typography>
           <LinearProgress 
             variant="determinate" 
-            value={Number(task.status)}
+            value={Number(task.progress)}
             sx={{
                 height: 5,
                 borderRadius: 5,

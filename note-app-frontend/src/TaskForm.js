@@ -9,7 +9,7 @@ const TaskForm = ({ currentTask, setCurrentTask, addTask, updateTask, action }) 
   const [title, setTitle] = useState(currentTask?.title || '');
   const [description, setDescription] = useState(currentTask?.description || '');
   const [weight, setWeight] = useState(currentTask?.weight || 1);
-  const [status, setStatus] = useState(Number(currentTask?.status) || 0);
+  const [progress, setProgress] = useState(Number(currentTask?.progress) || 0);
   const { categoryId: urlCategoryId } = useParams();
   const { selectedCategory, setSelectedCategory } = useContext(CategoryContext);
   const [categories, setCategories] = useState([]);
@@ -57,12 +57,12 @@ const TaskForm = ({ currentTask, setCurrentTask, addTask, updateTask, action }) 
       setDescription(currentTask.description);
       setCategory_id(currentTask ? currentTask.category_id : '');
       setWeight(currentTask.weight);
-      setStatus(currentTask ? Number(currentTask.status) : Number(0));
+      setProgress(currentTask ? Number(currentTask.progress) : Number(0));
     } else {
       setTitle('');
       setDescription('');
       setWeight(1);
-      setStatus(Number(0));
+      setProgress(Number(0));
       setCategory_id(null); // set category_id to null when there is no current task
     }
   }, [currentTask]);
@@ -72,7 +72,7 @@ const TaskForm = ({ currentTask, setCurrentTask, addTask, updateTask, action }) 
     event.preventDefault();
     setLoading(true);
   
-    const task = { id, title, description, category_id: category_id.toString(), weight, status };
+    const task = { id, title, description, category_id: category_id.toString(), weight, progress };
     
     try {
       if (action === 'edit') {
@@ -168,13 +168,13 @@ const TaskForm = ({ currentTask, setCurrentTask, addTask, updateTask, action }) 
       </FormControl>
     </Box>
     <Box mb={2}>
-      <Typography id="status-slider" gutterBottom>
+      <Typography id="progress-slider" gutterBottom>
         Progress:
       </Typography>
       <Slider
-        aria-labelledby="status-slider"
-        value={status}
-        onChange={(e, value) => setStatus(Number(value))}
+        aria-labelledby="progress-slider"
+        value={progress}
+        onChange={(e, value) => setProgress(Number(value))}
         valueLabelDisplay="auto"
         valueLabelFormat={(value) => `${value}%`}
         step={1}
@@ -183,13 +183,11 @@ const TaskForm = ({ currentTask, setCurrentTask, addTask, updateTask, action }) 
         max={100}
       />
     </Box>
-    <Box mb={2}>
+    <Box mb={2} sx={{display: 'flex', gap: 2}}>
       <Button type="submit" variant="contained" color="primary" disabled={loading}>
         {loading ? 'Loading...' : (action === 'new' ? 'Add Task' : 'Update Task')}
       </Button>
-      </Box>
-      <Box mb={1}>
-      <Button type="button" variant="contained" color="secondary" disabled={loading} onClick={handleCancel}>
+      <Button type="button" variant="outlined" color="primary" disabled={loading} onClick={handleCancel}>
         Cancel
       </Button>
     </Box>

@@ -1,11 +1,13 @@
 import React, { useContext } from 'react';
 import { useLocation, useNavigate, Link } from 'react-router-dom';
-import { List, ListItem, ListItemIcon, ListItemText, IconButton } from '@mui/material';
+import { List, ListItem, ListItemIcon, ListItemText, IconButton, Box } from '@mui/material';
 import NotesIcon from '@mui/icons-material/Notes';
 import TaskIcon from '@mui/icons-material/Task';
 import BookIcon from '@mui/icons-material/Book';
 import ChatIcon from '@mui/icons-material/Chat';
-import AddCircleIcon from '@mui/icons-material/AddCircle';
+import NoteAddIcon from '@mui/icons-material/NoteAdd';
+import PlaylistAddIcon from '@mui/icons-material/PlaylistAdd';
+import BookMarkAdd from '@mui/icons-material/BookmarkAdd';
 import CategoryContext from './CategoryContext';
 
 const styles = {
@@ -37,22 +39,34 @@ function Sidebar() {
     addLink = '/notes/new';
   } else if (location.pathname.startsWith('/tasks')) {
     addLink = '/tasks/new';
+  } else if (location.pathname.startsWith('/journals')) {
+    addLink = '/journals/new';
+  }
+
+  const handleAddNote = () => {
+    navigate('/notes/new', { state: { selectedCategory } });
   }
 
   const handleAddTask = () => {
     navigate('/tasks/new', { state: { selectedCategory } });
-  };  
+  };
+
+  const handleAddJournal = () => {
+    navigate('/journals/new', { state: { selectedCategory } });
+  };
 
   return (
     <List style={styles.sidebar}>
-      <ListItem>
-      <IconButton component={Link} to="/notes/new" color="inherit">
-          <AddCircleIcon fontSize="large" />
+        <IconButton onClick={() => handleAddNote()} style={{ color: '#fff' }}>
+          <PlaylistAddIcon fontSize="large" />
         </IconButton>
-        <IconButton onClick={() => handleAddTask()} color="inherit">
-          <AddCircleIcon fontSize="large" />
+        <IconButton onClick={() => handleAddTask()} style={{ color: '#fff' }}>
+          <NoteAddIcon fontSize="large" />
         </IconButton>
-      </ListItem>
+        <IconButton onClick={() => handleAddJournal()} style={{ color: '#fff' }}>
+          <BookMarkAdd fontSize="large" />
+        </IconButton>
+        <Box style={{ marginTop: '20px' }}>
       <ListItem
         button
         component={Link}
@@ -83,18 +97,37 @@ function Sidebar() {
         </ListItemIcon>
         <ListItemText primary="Tasks" primaryTypographyProps={{ variant: 'h6' }} />
       </ListItem>
-      <ListItem button component={Link} to="/journal" style={styles.listItem}>
+      <ListItem
+        button
+        component={Link}
+        to="/journals"
+        style={
+          location.pathname.startsWith('/journals')
+            ? { ...styles.listItem, ...styles.active }
+            : styles.listItem
+        }
+      >
         <ListItemIcon>
           <BookIcon fontSize="large" style={{ color: '#fff' }} />
         </ListItemIcon>
-        <ListItemText primary="Journal" primaryTypographyProps={{ variant: 'h6' }} />
+        <ListItemText primary="Journals" primaryTypographyProps={{ variant: 'h6' }} />
       </ListItem>
-      <ListItem button component={Link} to="/chat" style={styles.listItem}>
+      <ListItem
+        button
+        component={Link}
+        to="/chat"
+        style={
+          location.pathname.startsWith('/chat')
+            ? { ...styles.listItem, ...styles.active }
+            : styles.listItem
+        }
+      >
         <ListItemIcon>
           <ChatIcon fontSize="large" style={{ color: '#fff' }} />
         </ListItemIcon>
         <ListItemText primary="Chat" primaryTypographyProps={{ variant: 'h6' }} />
       </ListItem>
+      </Box>
     </List>
   );
 }

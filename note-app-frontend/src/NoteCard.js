@@ -24,7 +24,7 @@ const NoteCard = ({ note, onEdit, onDelete, expandedNote, setExpandedNote }) => 
     <Card sx={{ minWidth: 275, maxWidth: 500, mb: 2, backgroundColor: '#eaddcf' }}>
       <CardContent>
         <Box display="flex" justifyContent="space-between">
-          <Typography variant="h5" component="div">
+          <Typography variant="h6" component="div">
             {note.title}
           </Typography>
           <Box>

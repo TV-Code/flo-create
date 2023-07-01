@@ -1,15 +1,15 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { TextField, InputAdornment } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
-import { useSearch } from './SearchContext'; // import the useSearch hook
+import { useSearch } from './SearchContext';
 
 const SearchBar = () => {
-  const { searchTerm, setSearchTerm } = useSearch(); // use the hook to get searchTerm and setSearchTerm
-  const inputRef = useRef(null); // create a ref for the input element
+  const { searchTerm, setSearchTerm } = useSearch();
+  const inputRef = useRef(null);
 
   useEffect(() => {
     if (inputRef.current) {
-      inputRef.current.focus(); // focus the input field whenever searchTerm changes
+      inputRef.current.focus();
     }
   }, []);
 
@@ -31,9 +31,9 @@ const SearchBar = () => {
           </InputAdornment>
         ),
       }}
-      inputRef={inputRef} // attach the ref to the input element
+      inputRef={inputRef}
     />
   );
 };
 
-export default SearchBar;
+export default React.memo(SearchBar);

@@ -1,23 +1,25 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import axios from 'axios';
-import { CssBaseline, Typography, CircularProgress, IconButton, Box, Container } from '@mui/material';
-import MenuIcon from '@mui/icons-material/Menu';
+import { CssBaseline, Typography, CircularProgress, IconButton, Box, Container, Menu } from '@mui/material';
+import MenuOpen from '@mui/icons-material/MenuOpen';
 import './App.css';
 import { BrowserRouter as Router, Routes, Route, useParams, useLocation } from 'react-router-dom';
 import CategoryContext from './CategoryContext';
 import { useSearch } from './SearchContext';
-import NoteForm from './NoteForm';
 import NoteList from './NoteList';
-import Sidebar from './Sidebar';
+import NoteForm from './NoteForm';
 import TaskList from './TaskList';
 import TaskForm from './TaskForm';
+import JournalList from './JournalList';
+import JournalForm from './JournalForm';
+import Sidebar from './Sidebar';
 import SecondarySidebar from './SecondarySidebar';
 import SearchBar from './SearchBar';
+import SortFilter from './SortFilter';
 import CategoryView from './CategoryView';
-import Journal from './Journal';
 import Chat from './Chat';
 import { createTheme, ThemeProvider } from '@mui/material/styles';
-import { useFetchNotes, useFetchTasks } from './CustomHooks';
+import { useFetchNotes, useFetchTasks, useFetchJournals } from './CustomHooks';
 
 const theme = createTheme({
   typography: {
@@ -34,69 +36,52 @@ const theme = createTheme({
       default: '#f9f4ef'
     }
   },
+  components: {
+    MuiOutlinedInput: {
+      styleOverrides: {
+        root: {
+          "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
+            borderWidth: "2px" // Optional: Modify the outline width if needed
+          },
+        },
+      },
+    },
+  },
 });
 
 const App = () => {
   const [noteId, setNoteId] = useState(null);
   const [taskId, setTaskId] = useState(null);
+  const [journalId, setJournalId] = useState(null);
   const [currentNote, setCurrentNote] = useState(null);
   const [currentTask, setCurrentTask] = useState(null);
-  const [tasksUpdated, setTasksUpdated] = useState(false);
-  const [notesUpdated, setNotesUpdated] = useState(false);
+  const [currentJournal, setCurrentJournal] = useState(null);
   const [selectedCategory, setSelectedCategory] = useState(sessionStorage.getItem('selectedCategory') || null);
-  const [activeTab, setActiveTab] = useState(0);
   const { searchTerm, setSearchTerm } = useSearch();
+  const [sortCriteria, setSortCriteria] = useState('default');
   const [loading, setLoading] = useState(false);
   const [isSecondarySidebarOpen, setIsSecondarySidebarOpen] = useState(false);
-  const [filteredNotes, setFilteredNotes] = useState([]);
-  const [filteredTasks, setFilteredTasks] = useState([]);
-  const { loading: notesLoading, notes, fetchNotes } = useFetchNotes(selectedCategory, searchTerm);
-  const { loading: tasksLoading, tasks, fetchTasks } = useFetchTasks(selectedCategory, searchTerm);
-
-
+  const { loading: notesLoading, notes, fetchNotes } = useFetchNotes(selectedCategory, searchTerm, sortCriteria);
+  const { loading: tasksLoading, tasks, fetchTasks } = useFetchTasks(selectedCategory, searchTerm, sortCriteria);
+  const { loading: journalsLoading, journals, fetchJournals } = useFetchJournals(selectedCategory, searchTerm, sortCriteria);
+  const [activeTab, setActiveTab] = useState(() => {
+    const storedTab = sessionStorage.getItem('activeTab');
+    return storedTab !== null ? Number(storedTab) : 3;
+  });
+  
+  useEffect(() => {
+    sessionStorage.setItem('activeTab', activeTab);
+  }, [activeTab]);
 
   useEffect(() => {
-    console.log('Selected category in context provider:', selectedCategory);
-    // Whenever selectedCategory changes, update the session storage
     sessionStorage.setItem('selectedCategory', selectedCategory);
   }, [selectedCategory]);
 
   useEffect(() => {
     fetchNotes();
     fetchTasks();
-  }, [tasksUpdated, notesUpdated, selectedCategory, searchTerm]);
-
-  useEffect(() => {
-    let newFilteredNotes = [...notes];
-    let newFilteredTasks = [...tasks];
-  
-    if (selectedCategory) {
-      newFilteredNotes = newFilteredNotes.filter(note => note.category_id === selectedCategory);
-      newFilteredTasks = newFilteredTasks.filter(task => task.category_id === selectedCategory);
-    }
-  
-    if (activeTab === 0) {
-      // Show both notes and tasks
-    } else if (activeTab === 1) {
-      // Show only notes
-      newFilteredTasks = [];
-    } else if (activeTab === 2) {
-      // Show only tasks
-      newFilteredNotes = [];
-    }
-  
-    // add this to filter notes and tasks based on the searchTerm
-    if (searchTerm) {
-      const lowerCaseSearchTerm = searchTerm.toLowerCase();
-      newFilteredNotes = newFilteredNotes.filter(note => (note.title?.toLowerCase().includes(lowerCaseSearchTerm)) || (note.content?.toLowerCase().includes(lowerCaseSearchTerm)));
-      newFilteredTasks = newFilteredTasks.filter(task => (task.title?.toLowerCase().includes(lowerCaseSearchTerm)) || (task.content?.toLowerCase().includes(lowerCaseSearchTerm)));
-    }
-  
-    setFilteredNotes(newFilteredNotes);
-    setFilteredTasks(newFilteredTasks);
-  }, [notes, tasks, activeTab, selectedCategory, searchTerm]);
-
-
+    fetchJournals();
+  }, [selectedCategory, searchTerm, sortCriteria]);
 
   const toggleSecondarySidebar = () => {
     setIsSecondarySidebarOpen(!isSecondarySidebarOpen);
@@ -104,7 +89,23 @@ const App = () => {
 
   const handleSearch = useCallback((event) => {
     setSearchTerm(event.target.value);
-  }, [setSearchTerm]);
+  }, [setSearchTerm]);  
+
+  const deleteItem = async (id, type) => {
+    switch (type) {
+      case 'note':
+        deleteNote(id);
+        break;
+      case 'task':
+        deleteTask(id);
+        break;
+      case 'journal':
+        deleteJournal(id);
+        break;
+      default:
+        console.error('Invalid item type');
+    }
+  };
 
   const fetchNote = useCallback(async (id) => {
     setLoading(true);
@@ -217,25 +218,24 @@ const App = () => {
     } finally {
         setLoading(false);
     }
-}, []);
+  }, []);
 
 
-const addTask = async (task, category_id = null) => {
-  setLoading(true);  
-  task.category_id = category_id; // If category_id is not provided, it will be set to null
-  console.log("Adding task:", task);
-  try {
-    const response = await axios.post('http://127.0.0.1:5000/tasks', task);
-    console.log("Response data:", response.data.data);
-    const newTask = {...task, id: response.data.data};  // Combine the posted task object with the returned task id
-    fetchTasks([...tasks, newTask]);
-    setTasksUpdated(!tasksUpdated); // Toggle tasksUpdated state to trigger re-fetching of tasks
-  } catch (error) {
-    console.error('There was an error!', error);
-  } finally {
-    setLoading(false);
-  }
-};
+  const addTask = async (task, category_id = null) => {
+    setLoading(true);  
+    task.category_id = category_id; // If category_id is not provided, it will be set to null
+    console.log("Adding task:", task);
+    try {
+      const response = await axios.post('http://127.0.0.1:5000/tasks', task);
+      console.log("Response data:", response.data.data);
+      const newTask = {...task, id: response.data.data};  // Combine the posted task object with the returned task id
+      fetchTasks([...tasks, newTask]);
+    } catch (error) {
+      console.error('There was an error!', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
 
 
@@ -248,38 +248,38 @@ const addTask = async (task, category_id = null) => {
       console.error('There was an error!', error);
     }
     setLoading(false);
-};
+  };
 
-const deleteTask = async (id) => {
-  setLoading(true);
-  try {
-    await axios.delete(`http://127.0.0.1:5000/tasks/${id}`);
-    fetchTasks(tasks.filter(task => task.id !== id));
-  } catch (error) {
-    console.error(`There was an error deleting the note: ${error}`);
-  }
-  setLoading(false);
-};
+  const deleteTask = async (id) => {
+    setLoading(true);
+    try {
+      await axios.delete(`http://127.0.0.1:5000/tasks/${id}`);
+      fetchTasks(tasks.filter(task => task.id !== id));
+    } catch (error) {
+      console.error(`There was an error deleting the note: ${error}`);
+    }
+    setLoading(false);
+  };
 
-const NewTaskRoute = () => {
-  const location = useLocation();
-  const categoryFromPreviousPage = location.state?.selectedCategory ?? selectedCategory;
+  const NewTaskRoute = () => {
+    const location = useLocation();
+    const categoryFromPreviousPage = location.state?.selectedCategory ?? selectedCategory;
 
-  const handleAddTask = async (task, category_id) => {
-      await addTask(task, category_id);
-      fetchTasks();
-  }
+    const handleAddTask = async (task, category_id) => {
+        await addTask(task, category_id);
+        fetchTasks();
+    }
 
-  return (
-      <TaskForm
-          addTask={handleAddTask}
-          currentTask={currentTask}
-          setCurrentTask={setCurrentTask}
-          action='new'
-          selectedCategory={categoryFromPreviousPage}
-      />
-  );
-};
+    return (
+        <TaskForm
+            addTask={handleAddTask}
+            currentTask={currentTask}
+            setCurrentTask={setCurrentTask}
+            action='new'
+            selectedCategory={categoryFromPreviousPage}
+        />
+    );
+  };
 
   const EditTaskRoute = () => {
     const { id } = useParams();
@@ -311,7 +311,109 @@ const NewTaskRoute = () => {
       />
     );
   };
+    
+  const fetchJournal = useCallback(async (id) => {
+    setLoading(true);
+    setJournalId(id);
+    try {
+      const response = await axios.get(`http://127.0.0.1:5000/journal_entries/${id}`);
+      setCurrentJournal(response.data);
+    } catch (error) {
+      console.error(`There was an error retrieving the journal: ${error}`);
+      setCurrentJournal(null);
+    } finally {
+        setLoading(false);
+    }
+  }, []);
+
+  const addJournal = async (journal, category_id = null) => {
+      setLoading(true);  
+      journal.category_id = category_id; // If category_id is not provided, it will be set to null
+      try {
+        const response = await axios.post('http://127.0.0.1:5000/journal_entries', journal);
+        fetchJournals([...journals, response.data.data]);
+      } catch (error) {
+        console.error('There was an error!', error);
+      } finally {
+        setLoading(false);
+      }
+  };  
+
+  const updateJournal = async (updatedJournal) => {
+      setLoading(true);
+      try {
+        const response = await axios.put(`http://127.0.0.1:5000/journal_entries/${updatedJournal.id}`, updatedJournal);
+        fetchJournals(journals.map(journal => (journal.id === response.data.data.id ? response.data.data : journal)));
+      } catch (error) {
+        console.error('There was an error!', error);
+      }
+      setLoading(false);
+  }; 
+
+  const deleteJournal = async (id) => {
+      setLoading(true);
+      try {
+        await axios.delete(`http://127.0.0.1:5000/journal_entries/${id}`);
+        fetchJournals(journals.filter(journal => journal.id !== id));
+      } catch (error) {
+        console.error(`There was an error deleting the journal: ${error}`);
+      }
+      setLoading(false);
+  };
+
+  const NewJournalRoute = () => {
+    const location = useLocation();
+    const categoryFromPreviousPage = location.state?.selectedCategory ?? selectedCategory;
+    
+    const handleAddJournal = async (journal, category_id) => {
+        await addJournal(journal, category_id);
+        fetchJournals();
+    }
+    
+    return (
+      <JournalForm 
+          key={currentJournal ? currentJournal.id : 'new'} 
+          currentJournal={currentJournal}
+          setCurrentJournal={setCurrentJournal} 
+          addJournal={handleAddJournal} 
+          updateJournal={updateJournal} 
+          deleteJournal={deleteJournal} 
+          action='new'
+      />
   
+      );
+  };
+
+  const EditJournalRoute = () => {
+    const { id } = useParams();
+  
+    useEffect(() => {
+      if (id !== journalId) {
+        fetchJournal(id);
+      }
+    }, [id]);
+    
+    useEffect(() => {
+      if (currentJournal && journals.length) {
+        const matchingJournal = journals.find(journal => journal.id === currentJournal.id);
+        if (!matchingJournal || matchingJournal !== currentJournal) {
+          setCurrentJournal(matchingJournal);
+        }
+      }
+    }, [journals, currentJournal]);
+
+    return loading ? (
+      <CircularProgress />
+    ) : (
+      <JournalForm
+        updateJournal={updateJournal}
+        currentJournal={currentJournal}
+        setCurrentJournal={setCurrentJournal}
+        action='edit'
+      />
+    );
+  };
+    
   const handleCategorySelect = (category) => {
     setSelectedCategory(category)
   }
@@ -331,61 +433,89 @@ const NewTaskRoute = () => {
 
   const MainRoutes = () => {
     const location = useLocation();
+    const prevPath = useRef(location.pathname);
 
     useEffect(() => {
-      if (location.pathname === '/tasks') {
+      if (['/tasks', '/notes', '/journals'].includes(location.pathname)) {
         setSelectedCategory(null);
-      } else if (location.pathname === '/notes') {
-        setSelectedCategory(null);
+        setActiveTab(3);
       }
-    }, [location, setSelectedCategory]);
+    }, [location, setSelectedCategory, setActiveTab]);    
+
+    useEffect(() => {
+      if (prevPath.current !== location.pathname) {
+        if (['/tasks', '/notes', '/journals'].includes(location.pathname) || location.pathname.startsWith('/category')) {
+          setSearchTerm('');
+          setSortCriteria('default');
+        }
+        prevPath.current = location.pathname;
+      }
+    }, [location.pathname]);
 
     return loading ? (
       <CircularProgress />
     ) : (
       <Routes>
-        <Route path="/notes" element={<Box pt={4}><NoteList notes={filteredNotes} loading={loading} deleteNote={deleteNote} setCurrentNote={setCurrentNote} /></Box>} />
+        <Route path="/notes" element={<Box pt={4}><NoteList notes={notes} loading={loading} deleteNote={deleteNote} setCurrentNote={setCurrentNote} /></Box>} />
         <Route path="/notes/new" element={<Box pt={4}><NewNoteRoute /></Box>} />
         <Route path="/notes/:id" element={<Box pt={4}><EditNoteRoute /></Box>} />
-        <Route path="/tasks" element={<Box pt={4}><TaskList tasks={filteredTasks} loading={loading} deleteTask={deleteTask} setCurrentTask={setCurrentTask} showProgressBar={true} /></Box>} />
+        <Route path="/tasks" element={<Box pt={4}><TaskList tasks={tasks} loading={loading} deleteTask={deleteTask} setCurrentTask={setCurrentTask} showProgressBar={true} /></Box>} />
         <Route path="/tasks/new" element={<Box pt={4}><NewTaskRoute /></Box>} />
         <Route path="/tasks/:id" element={<Box pt={4}><EditTaskRoute /></Box>} />
-        <Route path="/category/:id" element={<CategoryView setSelectedCategory={setSelectedCategory} selectedCategory={selectedCategory} filteredNotes={filteredNotes} filteredTasks={filteredTasks} />} />
-        <Route path="/journal" element={<Box pt={4}><Journal /></Box>} />
+        <Route path="/journals" element={<Box pt={4}><JournalList journals={journals} loading={loading} deleteJournal={deleteJournal} setCurrentJournal={setCurrentJournal} /></Box>} />
+        <Route path="/journals/new" element={<Box pt={4}><NewJournalRoute /></Box>} />
+        <Route path="/journals/:id" element={<Box pt={4}><EditJournalRoute /></Box>} />
+        <Route path="/category/:id" element={<CategoryView activeTab={activeTab} setActiveTab={setActiveTab} setSelectedCategory={setSelectedCategory} selectedCategory={selectedCategory} notes={notes} tasks={tasks} journals={journals} sortCriteria={sortCriteria} setSortCriteria={setSortCriteria} deleteItem={deleteItem} />} />
         <Route path="/chat" element={<Box pt={4}><Chat /></Box>} />
       </Routes>
     )
   }
 
-  const AppHeader = ({ toggleSecondarySidebar, handleSearch, searchTerm }) => (
-    <Box 
-      component="header" 
-      position="sticky" 
-      top={0} 
-      left={0}
-      right={0} 
-      height={80}
-      display="flex" 
-      alignItems="center" 
-      px={2} 
-      bgcolor="#eaddcf"
-      boxShadow={1}
-      zIndex={999} // This will keep the header on top of other content
-    >
-      <IconButton
-        edge="start"
-        color="inherit"
-        aria-label="menu"
-        onClick={(event) => { event.stopPropagation(); toggleSecondarySidebar(); }}
+  const AppHeader = ({ toggleSecondarySidebar, handleSearch, searchTerm, activeTab }) => {
+    const prevTabRef = useRef();
+    const prevSearchTermRef = useRef();
+
+    useEffect(() => {
+      if (prevTabRef.current !== activeTab && prevSearchTermRef.current === searchTerm) {
+        // The tab has changed. Reset the search term.
+        handleSearch({ target: { value: '' } });
+      }
+      // Store current tab for the next render
+      prevTabRef.current = activeTab;
+      prevSearchTermRef.current = searchTerm;
+    }, [activeTab, searchTerm]);
+
+    return (
+      <Box 
+        component="header" 
+        position="sticky" 
+        top={0} 
+        left={0}
+        right={0} 
+        height={80}
+        display="flex" 
+        alignItems="center" 
+        px={2} 
+        bgcolor="#eaddcf"
+        boxShadow={1}
+        zIndex={999} // This will keep the header on top of other content
       >
-        <MenuIcon />
-      </IconButton>
-      <Typography variant="h3" align="center" color="textPrimary" style={{ flexGrow: 1 }}>
-        MindMap
-      </Typography>
-      <SearchBar onSearch={handleSearch} searchTerm={searchTerm} />
-    </Box>
-  );
+        <IconButton
+          edge="start"
+          color="inherit"
+          aria-label="menu"
+          onClick={(event) => { event.stopPropagation(); toggleSecondarySidebar(); }}
+        >
+          <MenuOpen />
+        </IconButton>
+        <Typography variant="h3" align="center" color="textPrimary" style={{ flexGrow: 1 }}>
+          Inkwell
+        </Typography>
+        <SortFilter activeTab={activeTab} sortCriteria={sortCriteria} setSortCriteria={setSortCriteria} />
+        <SearchBar onSearch={handleSearch} searchTerm={searchTerm} />
+      </Box>
+    );
+  };
 
   return (
     <CategoryContext.Provider value={{ selectedCategory, setSelectedCategory }}>
@@ -397,11 +527,12 @@ const NewTaskRoute = () => {
             <Sidebar />
           </Box>
           <Box flex={1} overflow="auto">
-            <AppHeader 
-              toggleSecondarySidebar={toggleSecondarySidebar} 
-              handleSearch={handleSearch} 
-              searchTerm={searchTerm} 
-            />
+          <AppHeader 
+            toggleSecondarySidebar={toggleSecondarySidebar}
+            handleSearch={handleSearch}
+            searchTerm={searchTerm}
+            activeTab={activeTab}
+          />
             {renderSecondarySidebar()}
             <Container>
               <MainRoutes />

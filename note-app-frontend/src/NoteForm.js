@@ -139,15 +139,13 @@ const NoteForm = ({ currentNote, setCurrentNote, addNote, updateNote, action }) 
           ))}
         </Select>
         </Box>
-        <Box mb={2}>
-      <Button type="submit" variant="contained" color="primary" disabled={loading}>
-        {loading ? 'Loading...' : (action === 'new' ? 'Add Note' : 'Update Note')}
-      </Button>
-      </Box>
-      <Box mb={1}>
-      <Button type="button" variant="contained" color="#8c7851" disabled={loading} onClick={handleCancel}>
-        Cancel
-      </Button>
+        <Box mb={2} sx={{display: 'flex', gap: 2}}>
+        <Button type="submit" variant="contained" color="primary" disabled={loading}>
+          {loading ? 'Loading...' : (action === 'new' ? 'Add Note' : 'Update Note')}
+        </Button>
+        <Button type="button" variant="outlined" color="primary" disabled={loading} onClick={handleCancel}>
+          Cancel
+        </Button>
       </Box>
       <Snackbar
         anchorOrigin={{

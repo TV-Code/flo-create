@@ -16,7 +16,7 @@ const NoteList = ({ deleteNote, notes, loading }) => {
   };  
 
   return (
-    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
+    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, marginBottom: 5 }}>
       {loading ? (
         <CircularProgress />
       ) : (

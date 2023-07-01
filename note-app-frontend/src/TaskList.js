@@ -17,7 +17,7 @@ function TaskList({ tasks, loading, deleteTask, categoryColor, lightenedColor, s
   };
 
   const calculateTotalProgress = () => {
-    const totalWeightedProgress = tasks.reduce((total, task) => total + (task.status * task.weight), 0);
+    const totalWeightedProgress = tasks.reduce((total, task) => total + (task.progress * task.weight), 0);
     const totalPossibleWeight = tasks.reduce((total, task) => total + (100 * task.weight), 0);
     return totalPossibleWeight > 0 ? (totalWeightedProgress / totalPossibleWeight) * 100 : 0;
   };
@@ -50,7 +50,7 @@ function TaskList({ tasks, loading, deleteTask, categoryColor, lightenedColor, s
               </Typography>
             </>
           )}
-          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
+          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, marginBottom: 5 }}>
             {tasks.map((task) => (
               <TaskCard
                 key={task.id}
