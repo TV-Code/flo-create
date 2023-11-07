@@ -4,20 +4,26 @@ import CloseIcon from '@mui/icons-material/Close';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import CategoryContext from './CategoryContext';
+import LastViablePathContext from './LastViablePathContext';
 
 const NoteForm = ({ currentNote, setCurrentNote, addNote, updateNote, action }) => {
-  const [title, setTitle] = useState(currentNote?.title || '');
-  const [body, setBody] = useState(currentNote?.body || '');
   const { categoryId: urlCategoryId } = useParams();
   const { selectedCategory, setSelectedCategory } = useContext(CategoryContext);
   const [categories, setCategories] = useState([]);
-  const [category_id, setCategory_id] = useState('');
   const [loadingCategories, setLoadingCategories] = useState(true);
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
   const { id } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
+  const lastViablePath = useContext(LastViablePathContext);
+
+  // Create new form state
+  const [formState, setFormState] = useState({
+    title: '',
+    body: '',
+    category_id: '',
+  });
 
   useEffect(() => {
     const fetchCategories = async () => {
@@ -26,9 +32,15 @@ const NoteForm = ({ currentNote, setCurrentNote, addNote, updateNote, action }) 
         const response = await axios.get('http://127.0.0.1:5000/categories');
         setCategories(response.data);
         if (location.state && location.state.selectedCategory && action === 'new') {
-          setCategory_id(location.state.selectedCategory);
+          setFormState(prevFormState => ({
+            ...prevFormState,
+            category_id: location.state.selectedCategory,
+          }));
         } else if (currentNote && action === 'edit') {
-          setCategory_id(currentNote.category_id);
+          setFormState(prevFormState => ({
+            ...prevFormState,
+            category_id: currentNote.category_id,
+          }));
         }
       } catch (error) {
         console.error('There was an error fetching categories', error);
@@ -36,57 +48,84 @@ const NoteForm = ({ currentNote, setCurrentNote, addNote, updateNote, action }) 
         setLoadingCategories(false);
       }
     };
-  
+
     fetchCategories();
   }, [urlCategoryId, currentNote, action, location.state]);
-  
 
   useEffect(() => {
     if (action === 'new' && selectedCategory) {
-      setCategory_id(selectedCategory.id);
+      setFormState(prevFormState => ({
+        ...prevFormState,
+        category_id: selectedCategory.id,
+      }));
     }
-  }, [selectedCategory, action]);  
+  }, [selectedCategory, action]);
 
   useEffect(() => {
-    console.log('currentNote', currentNote);
-
-    if (currentNote) {
-      setTitle(currentNote.title);
-      setBody(currentNote.body);
-      setCategory_id(currentNote ? currentNote.category_id : '');
-    } else {
-      setTitle('');
-      setBody('');
-      setCategory_id(null); // set category_id to null when there is no current note
+    if (id && currentNote) { // for editing an existing note
+      setFormState({
+        title: currentNote.title,
+        body: currentNote.body,
+        category_id: currentNote.category_id,
+      });
+    } else if (!id) { // for creating a new note
+      setFormState({
+        title: '',
+        body: '',
+        category_id: selectedCategory ? selectedCategory.id : null,
+      });
     }
-  }, [currentNote]);
+  }, [currentNote, id, selectedCategory]);
 
+  const handleInputChange = (event) => {
+    const { name, value } = event.target;
+
+    setFormState(prevFormState => ({
+      ...prevFormState,
+      [name]: value,
+    }));
+  };
 
   const handleSubmit = async (event) => {
     event.preventDefault();
     setLoading(true);
-  
-    const note = { id, title, body, category_id: category_id.toString() };
-    
+
+    const note = {
+      id,
+      title: formState.title,
+      body: formState.body,
+      category_id: formState.category_id.toString(),
+    };
+
     try {
       if (action === 'edit') {
-        updateNote(note);
+        await updateNote(note);
       } else if (action === 'new') {
-        addNote(note, category_id); // calling the addNote function passed as prop
+        await addNote(note, formState.category_id);
       }
+      setCurrentNote(null);
+      setOpen(true);
+      navigate(lastViablePath);
     } catch (error) {
       console.error('There was an error!', error);
     } finally {
-      setCurrentNote(null);
+      setFormState({
+        title: '',
+        body: '',
+        category_id: '',
+      });
       setLoading(false);
-      setOpen(true);
-      navigate(-1);
     }
   };
 
-
   const handleCancel = () => {
-    navigate(-1);
+    setFormState({
+      title: '',
+      body: '',
+      category_id: '',
+    });
+    setCurrentNote(null);
+    navigate(lastViablePath);
   };
 
   const handleClose = (event, reason) => {
@@ -95,41 +134,46 @@ const NoteForm = ({ currentNote, setCurrentNote, addNote, updateNote, action }) 
     }
 
     setOpen(false);
+    setFormState({
+      title: '',
+      body: '',
+      category_id: '',
+    });
+    setCurrentNote(null);
   };
-
-  const handleCategoryChange = (event) => {
-    setCategory_id(event.target.value);
-  };
-  
 
   return (
     <Box component="form" onSubmit={handleSubmit}>
       <Box mb={2}>
-      <TextField
-        label="Title"
-        value={title}
-        onChange={(e) => setTitle(e.target.value)}
-        fullWidth
-        required
-        autoComplete="off"
-      />
+        <TextField
+          name="title"
+          label="Title"
+          value={formState.title}
+          onChange={handleInputChange}
+          fullWidth
+          required
+          autoComplete="off"
+        />
       </Box>
       <Box mb={2}>
-      <TextField
-        label="Body"
-        value={body}
-        onChange={(e) => setBody(e.target.value)}
-        fullWidth
-        multiline
-        rows={4}
-        autoComplete="off"
-      />
+        <TextField
+          name="body"
+          label="Body"
+          value={formState.body}
+          onChange={handleInputChange}
+          fullWidth
+          multiline
+          minRows={4}
+          maxRows={17}
+          autoComplete="off"
+        />
       </Box>
       <Box mb={2}>
         <Select
+          name="category_id"
           label="Category"
-          value={category_id || ''}
-          onChange={handleCategoryChange}
+          value={formState.category_id || ''}
+          onChange={handleInputChange}
           fullWidth
         >
           {categories.map((category) => (
@@ -138,8 +182,8 @@ const NoteForm = ({ currentNote, setCurrentNote, addNote, updateNote, action }) 
             </MenuItem>
           ))}
         </Select>
-        </Box>
-        <Box mb={2} sx={{display: 'flex', gap: 2}}>
+      </Box>
+      <Box mb={2} sx={{display: 'flex', gap: 2}}>
         <Button type="submit" variant="contained" color="primary" disabled={loading}>
           {loading ? 'Loading...' : (action === 'new' ? 'Add Note' : 'Update Note')}
         </Button>
@@ -155,10 +199,15 @@ const NoteForm = ({ currentNote, setCurrentNote, addNote, updateNote, action }) 
         open={open}
         autoHideDuration={6000}
         onClose={handleClose}
-        message="Note saved successfully"
+        message={action === 'new' ? 'Note added successfully!' : 'Note updated successfully!'}
         action={
           <React.Fragment>
-            <IconButton size="small" aria-label="close" color="inherit" onClick={handleClose}>
+            <IconButton
+              size="small"
+              aria-label="close"
+              color="inherit"
+              onClick={handleClose}
+            >
               <CloseIcon fontSize="small" />
             </IconButton>
           </React.Fragment>

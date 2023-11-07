@@ -1,10 +1,14 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { Box, CircularProgress, LinearProgress, Typography } from '@mui/material';
+import React, { useState, useEffect, useMemo, useContext } from 'react';
+import { Box, CircularProgress, LinearProgress, Typography, Grid } from '@mui/material';
+import { Masonry } from '@mui/lab';
 import { useNavigate, useLocation } from 'react-router-dom';
+import AllItemsContext from './AllItemsContext';
 import TaskCard from './TaskCard';
+import CompactTaskCard from './CompactTaskCard';
 
-function TaskList({ tasks, loading, deleteTask, categoryColor, lightenedColor, showProgressBar }) {
-  const [expandedTask, setExpandedTask] = useState(null);
+function TaskList({ tasks, loading, deleteTask, categoryColor, lightenedColor, showProgressBar, viewMode, getCategoryColor }) {
+  const [ expandedTask, setExpandedTask ] = useState(null);
+  const { currentTask, setCurrentTask } = useContext(AllItemsContext);
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -13,6 +17,7 @@ function TaskList({ tasks, loading, deleteTask, categoryColor, lightenedColor, s
   };
 
   const handleEdit = (task) => {
+    setCurrentTask(task);
     navigate(`/tasks/${task.id}`);
   };
 
@@ -50,20 +55,31 @@ function TaskList({ tasks, loading, deleteTask, categoryColor, lightenedColor, s
               </Typography>
             </>
           )}
-          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, marginBottom: 5 }}>
-            {tasks.map((task) => (
-              <TaskCard
-                key={task.id}
-                task={task}
-                onEdit={handleEdit}
-                onDelete={handleDelete}
-                categoryColor={categoryColor}
-                lightenedColor={lightenedColor}
-                expandedTask={expandedTask}
-                setExpandedTask={setExpandedTask}
-              />
+            <Masonry columns={3} spacing={2}>
+            {tasks.map(task => (
+              viewMode === 'regular' ? (
+                <TaskCard
+                  key={task.id}
+                  task={task}
+                  onEdit={handleEdit}
+                  onDelete={handleDelete}
+                  getCategoryColor={getCategoryColor}
+                  categoryColor={categoryColor}
+                  lightenedColor={lightenedColor}
+                  expandedTask={expandedTask}
+                  setExpandedTask={setExpandedTask}
+                />
+              ) : (
+                <CompactTaskCard
+                  key={task.id}
+                  task={task}
+                  onEdit={handleEdit}
+                  onDelete={handleDelete}
+                  getCategoryColor={getCategoryColor}
+                />
+              )
             ))}
-          </Box>
+            </Masonry>
         </>
       )}
     </Box>

@@ -1,13 +1,15 @@
-import React, { useState, useEffect } from 'react';
-import { Card, CardContent, Typography, Box, IconButton, Collapse, LinearProgress } from '@mui/material';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { Card, CardContent, Typography, Box, IconButton, LinearProgress } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
+import { useTheme } from '@emotion/react';
 
 const TaskCard = ({ task, onEdit, onDelete, categoryColor, lightenedColor, expandedTask, setExpandedTask }) => {
   const maxLength = 100;  // Max number of characters to display before showing 'Read More'
   const [readMore, setReadMore] = useState(false);
+  const theme = useTheme();
 
   useEffect(() => {
     setReadMore(task.description.length > maxLength);
@@ -20,7 +22,6 @@ const TaskCard = ({ task, onEdit, onDelete, categoryColor, lightenedColor, expan
   const isExpanded = expandedTask === task.id;
   const displayDescription = isExpanded ? task.description : `${task.description.substring(0, maxLength)}${readMore ? '...' : ''}`;
 
-  // Calculate status based on task progress
   const taskStatus = task.progress === 0 
     ? "Not Started" 
     : task.progress < 100 
@@ -28,13 +29,13 @@ const TaskCard = ({ task, onEdit, onDelete, categoryColor, lightenedColor, expan
     : "Completed";
 
   return (
-    <Card sx={{ minWidth: 275, maxWidth: 500, mb: 2, backgroundColor: '#eaddcf' }}>
+    <Card sx={{ minWidth: 275, maxWidth: 345, mb: 2, backgroundColor: theme.palette.custom.cardBackground }}> 
       <CardContent>
-        <Box display="flex" justifyContent="space-between">
+        <Box display="flex" justifyContent="space-between" alignItems="flex-start">
           <Typography variant="h6" component="div">
             {task.title}
           </Typography>
-          <Box>
+          <Box display="flex" flexDirection="row" alignItems="center">
             <IconButton onClick={() => onEdit(task)} sx={{ ml: 1 }}>
               <EditIcon />
             </IconButton>
@@ -55,7 +56,7 @@ const TaskCard = ({ task, onEdit, onDelete, categoryColor, lightenedColor, expan
           </Box>
         )}
         <Typography variant="body2">
-          Weight: {task.weight}
+          Priority: {task.weight}
         </Typography>
         <Typography variant="body2">
           Status: {taskStatus}

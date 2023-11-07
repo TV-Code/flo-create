@@ -1,11 +1,14 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import axios from 'axios';
-import { CssBaseline, Typography, CircularProgress, IconButton, Box, Container, Menu } from '@mui/material';
+import { CssBaseline, Typography, CircularProgress, IconButton, Box, Container, Button } from '@mui/material';
 import MenuOpen from '@mui/icons-material/MenuOpen';
 import './App.css';
 import { BrowserRouter as Router, Routes, Route, useParams, useLocation } from 'react-router-dom';
 import CategoryContext from './CategoryContext';
+import LocationListener from './LocationListener';
 import { useSearch } from './SearchContext';
+import ThemeToggleButton from './ThemeToggleButton';
+import AnalyticsDashboard from './AnalyticsDashboard';
 import NoteList from './NoteList';
 import NoteForm from './NoteForm';
 import TaskList from './TaskList';
@@ -17,37 +20,9 @@ import SecondarySidebar from './SecondarySidebar';
 import SearchBar from './SearchBar';
 import SortFilter from './SortFilter';
 import CategoryView from './CategoryView';
-import Chat from './Chat';
 import { createTheme, ThemeProvider } from '@mui/material/styles';
 import { useFetchNotes, useFetchTasks, useFetchJournals } from './CustomHooks';
-
-const theme = createTheme({
-  typography: {
-    fontFamily: 'Lora, serif',
-  },
-  palette: {
-    primary: {
-      main: '#f25042',
-    },
-    secondary: {
-      main: '#8c7851',
-    },
-    background: {
-      default: '#f9f4ef'
-    }
-  },
-  components: {
-    MuiOutlinedInput: {
-      styleOverrides: {
-        root: {
-          "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
-            borderWidth: "2px" // Optional: Modify the outline width if needed
-          },
-        },
-      },
-    },
-  },
-});
+import AllItemsContext from './AllItemsContext';
 
 const App = () => {
   const [noteId, setNoteId] = useState(null);
@@ -56,6 +31,7 @@ const App = () => {
   const [currentNote, setCurrentNote] = useState(null);
   const [currentTask, setCurrentTask] = useState(null);
   const [currentJournal, setCurrentJournal] = useState(null);
+  const [categories, setCategories] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState(sessionStorage.getItem('selectedCategory') || null);
   const { searchTerm, setSearchTerm } = useSearch();
   const [sortCriteria, setSortCriteria] = useState('default');
@@ -64,11 +40,52 @@ const App = () => {
   const { loading: notesLoading, notes, fetchNotes } = useFetchNotes(selectedCategory, searchTerm, sortCriteria);
   const { loading: tasksLoading, tasks, fetchTasks } = useFetchTasks(selectedCategory, searchTerm, sortCriteria);
   const { loading: journalsLoading, journals, fetchJournals } = useFetchJournals(selectedCategory, searchTerm, sortCriteria);
+  const [themeMode, setThemeMode] = useState('light');
+  const [viewMode, setViewMode] = useState('regular');
   const [activeTab, setActiveTab] = useState(() => {
     const storedTab = sessionStorage.getItem('activeTab');
     return storedTab !== null ? Number(storedTab) : 3;
   });
   
+  const theme = createTheme({
+    typography: {
+      fontFamily: 'Lora, serif',
+    },
+    palette: {
+      mode: themeMode,  // Use themeMode state here
+      primary: {
+        main: '#f25042',
+      },
+      secondary: {
+        main: '#8c7851',
+      },
+      background: {
+        default: themeMode === 'light' ? '#f9f4ef' : '#303030',  // Change background color based on theme mode
+      },
+      custom: {
+        header: themeMode === 'light' ? '#F7F7F7' : '#444',
+        sidebar: themeMode === 'light' ? '#716040' : '#555',
+        active: themeMode === 'light' ? '#8c7851' : '#777',
+        cardBackground: themeMode === 'light' ? '#eaddcf' : '#424242',
+        text: themeMode === 'light' ? '#eaddcf' : '#ddd',
+        listItem: themeMode === 'light' ? '#444' : '#666',
+        icon: themeMode === 'light' ? '#fff' : '#ddd', // This will control the color of the icons
+      },
+    },
+    components: {
+      MuiOutlinedInput: {
+        styleOverrides: {
+          root: {
+            "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
+              borderWidth: "2px" // Optional: Modify the outline width if needed
+            },
+          },
+        },
+      },
+    },
+  });
+  
+
   useEffect(() => {
     sessionStorage.setItem('activeTab', activeTab);
   }, [activeTab]);
@@ -106,6 +123,25 @@ const App = () => {
         console.error('Invalid item type');
     }
   };
+
+  const toggleTheme = () => {
+    setThemeMode(prevThemeMode => prevThemeMode === 'light' ? 'dark' : 'light');
+  };
+
+  const handleToggleViewMode = () => {
+    setViewMode(viewMode === 'regular' ? 'compact' : 'regular');
+  };
+
+  useEffect(() => {
+    axios.get('http://127.0.0.1:5000/categories')
+      .then(response => setCategories(response.data))
+      .catch(error => console.log('Error fetching categories:', error));
+  }, []);
+
+  function getCategoryColor(categoryId) {
+    const category = categories.find(category => category.id === categoryId);
+    return category ? category.color : 'default-color';
+  }
 
   const fetchNote = useCallback(async (id) => {
     setLoading(true);
@@ -237,8 +273,6 @@ const App = () => {
     }
   };
 
-
-
   const updateTask = async (updatedTask) => {
     setLoading(true);
     try {
@@ -266,8 +300,8 @@ const App = () => {
     const categoryFromPreviousPage = location.state?.selectedCategory ?? selectedCategory;
 
     const handleAddTask = async (task, category_id) => {
-        await addTask(task, category_id);
-        fetchTasks();
+      const newTask = await addTask(task, category_id);
+      fetchTasks([...tasks, newTask]);
     }
 
     return (
@@ -287,14 +321,16 @@ const App = () => {
     useEffect(() => {
       if (id !== taskId) {
         fetchTask(id);
+        console.log(id);
       }
-    }, [id]);
+    }, [id, fetchTask, tasks]);
     
     useEffect(() => {
       if (currentTask && tasks.length) {
         const matchingTask = tasks.find(task => task.id === currentTask.id);
         if (!matchingTask || matchingTask !== currentTask) {
           setCurrentTask(matchingTask);
+          console.log(currentTask);
         }
       }
     }, [tasks, currentTask]);
@@ -456,17 +492,17 @@ const App = () => {
       <CircularProgress />
     ) : (
       <Routes>
-        <Route path="/notes" element={<Box pt={4}><NoteList notes={notes} loading={loading} deleteNote={deleteNote} setCurrentNote={setCurrentNote} /></Box>} />
+        <Route path="/notes" element={<Box pt={4}><NoteList notes={notes} loading={loading} deleteNote={deleteNote} setCurrentNote={setCurrentNote} viewMode={viewMode} onToggleViewMode={handleToggleViewMode} getCategoryColor={getCategoryColor} /></Box>} />
         <Route path="/notes/new" element={<Box pt={4}><NewNoteRoute /></Box>} />
         <Route path="/notes/:id" element={<Box pt={4}><EditNoteRoute /></Box>} />
-        <Route path="/tasks" element={<Box pt={4}><TaskList tasks={tasks} loading={loading} deleteTask={deleteTask} setCurrentTask={setCurrentTask} showProgressBar={true} /></Box>} />
+        <Route path="/tasks" element={<Box pt={4}><TaskList tasks={tasks} loading={loading} deleteTask={deleteTask} currentTask={currentTask} setCurrentTask={setCurrentTask} showProgressBar={true} viewMode={viewMode} onToggleViewMode={handleToggleViewMode} getCategoryColor={getCategoryColor} /></Box>} />
         <Route path="/tasks/new" element={<Box pt={4}><NewTaskRoute /></Box>} />
         <Route path="/tasks/:id" element={<Box pt={4}><EditTaskRoute /></Box>} />
-        <Route path="/journals" element={<Box pt={4}><JournalList journals={journals} loading={loading} deleteJournal={deleteJournal} setCurrentJournal={setCurrentJournal} /></Box>} />
+        <Route path="/journals" element={<Box pt={4}><JournalList journals={journals} loading={loading} deleteJournal={deleteJournal} setCurrentJournal={setCurrentJournal} viewMode={viewMode} onToggleViewMode={handleToggleViewMode} getCategoryColor={getCategoryColor} /></Box>} />
         <Route path="/journals/new" element={<Box pt={4}><NewJournalRoute /></Box>} />
         <Route path="/journals/:id" element={<Box pt={4}><EditJournalRoute /></Box>} />
-        <Route path="/category/:id" element={<CategoryView activeTab={activeTab} setActiveTab={setActiveTab} setSelectedCategory={setSelectedCategory} selectedCategory={selectedCategory} notes={notes} tasks={tasks} journals={journals} sortCriteria={sortCriteria} setSortCriteria={setSortCriteria} deleteItem={deleteItem} />} />
-        <Route path="/chat" element={<Box pt={4}><Chat /></Box>} />
+        <Route path="/category/:id" element={<CategoryView activeTab={activeTab} setActiveTab={setActiveTab} setSelectedCategory={setSelectedCategory} selectedCategory={selectedCategory} notes={notes} tasks={tasks} journals={journals} sortCriteria={sortCriteria} setSortCriteria={setSortCriteria} deleteItem={deleteItem} getCategoryColor={getCategoryColor} viewMode={viewMode} />} />
+        <Route path="/analytics" element={<Box pt={4}><AnalyticsDashboard/></Box>} />
       </Routes>
     )
   }
@@ -496,7 +532,7 @@ const App = () => {
         display="flex" 
         alignItems="center" 
         px={2} 
-        bgcolor="#eaddcf"
+        bgcolor={ theme.palette.custom.cardBackground }
         boxShadow={1}
         zIndex={999} // This will keep the header on top of other content
       >
@@ -508,6 +544,10 @@ const App = () => {
         >
           <MenuOpen />
         </IconButton>
+        <ThemeToggleButton toggleTheme={toggleTheme} themeMode={themeMode} />
+        <Button onClick={handleToggleViewMode}>
+        {viewMode === 'regular' ? 'compact' : 'regular'} view
+        </Button>
         <Typography variant="h3" align="center" color="textPrimary" style={{ flexGrow: 1 }}>
           Inkwell
         </Typography>
@@ -519,7 +559,9 @@ const App = () => {
 
   return (
     <CategoryContext.Provider value={{ selectedCategory, setSelectedCategory }}>
+    <AllItemsContext.Provider value={{ currentTask, setCurrentTask, currentNote, setCurrentNote, currentJournal, setCurrentJournal }}>
     <Router>
+    <LocationListener>
       <ThemeProvider theme={theme}>
         <CssBaseline />
         <Box display="flex" height="100vh">
@@ -540,7 +582,9 @@ const App = () => {
           </Box>
         </Box>
       </ThemeProvider>
+    </LocationListener>
     </Router>
+  </AllItemsContext.Provider>
   </CategoryContext.Provider>
   );
 };

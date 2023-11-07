@@ -28,8 +28,7 @@ const SortFilter = ({ sortCriteria, setSortCriteria, activeTab }) => {
           <MenuItem value={'progress_asc'}>Progress - Low to High</MenuItem>
           <MenuItem value={'weight_desc'}>Weight - High to Low</MenuItem>
           <MenuItem value={'weight_asc'}>Weight - Low to High</MenuItem>
-          <MenuItem value={'not_started'}>Not Started</MenuItem>
-          <MenuItem value={'in_progress'}>In Progress</MenuItem>
+          <MenuItem value={'incomplete'}>Incomplete</MenuItem>
           <MenuItem value={'completed'}>Completed</MenuItem>
         </Select>
       ) : (

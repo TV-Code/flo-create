@@ -50,11 +50,8 @@ const sortData = (data, criteria) => {
       case 'date_desc':
         sortedData = [...data].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
         break;
-      case 'not_started':
-        sortedData = data.filter(task => task.status === 'Not Started');
-        break;
-      case 'in_progress':
-        sortedData = data.filter(task => task.status === 'In Progress');
+      case 'incomplete':
+        sortedData = data.filter(task => task.status === 'Not Started' || task.status === 'In Progress');
         break;
       case 'completed':
         sortedData = data.filter(task => task.status === 'Completed');

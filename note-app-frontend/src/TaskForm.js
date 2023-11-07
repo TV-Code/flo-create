@@ -4,22 +4,37 @@ import CloseIcon from '@mui/icons-material/Close';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import CategoryContext from './CategoryContext';
+import LastViablePathContext from './LastViablePathContext';
 
 const TaskForm = ({ currentTask, setCurrentTask, addTask, updateTask, action }) => {
-  const [title, setTitle] = useState(currentTask?.title || '');
-  const [description, setDescription] = useState(currentTask?.description || '');
-  const [weight, setWeight] = useState(currentTask?.weight || 1);
-  const [progress, setProgress] = useState(Number(currentTask?.progress) || 0);
   const { categoryId: urlCategoryId } = useParams();
   const { selectedCategory, setSelectedCategory } = useContext(CategoryContext);
   const [categories, setCategories] = useState([]);
-  const [category_id, setCategory_id] = useState('');
   const [loadingCategories, setLoadingCategories] = useState(true);
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
   const { id } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
+  const lastViablePath = useContext(LastViablePathContext);
+
+  // Create new form state
+  const [formState, setFormState] = useState({
+    title: '',
+    description: '',
+    weight: 1,
+    progress: Number(0),
+    category_id: null,
+  });
+
+  const handleInputChange = (event) => {
+    const { name, value } = event.target;
+
+    setFormState(prevFormState => ({
+      ...prevFormState,
+      [name]: value,
+    }));
+  };
 
   useEffect(() => {
     const fetchCategories = async () => {
@@ -28,9 +43,15 @@ const TaskForm = ({ currentTask, setCurrentTask, addTask, updateTask, action }) 
         const response = await axios.get('http://127.0.0.1:5000/categories');
         setCategories(response.data);
         if (location.state && location.state.selectedCategory && action === 'new') {
-          setCategory_id(location.state.selectedCategory);
+          setFormState(prevFormState => ({
+            ...prevFormState,
+            category_id: location.state.selectedCategory,
+          }));
         } else if (currentTask && action === 'edit') {
-          setCategory_id(currentTask.category_id);
+          setFormState(prevFormState => ({
+            ...prevFormState,
+            category_id: currentTask.category_id,
+          }));
         }
       } catch (error) {
         console.error('There was an error fetching categories', error);
@@ -38,61 +59,85 @@ const TaskForm = ({ currentTask, setCurrentTask, addTask, updateTask, action }) 
         setLoadingCategories(false);
       }
     };
-  
+
     fetchCategories();
   }, [urlCategoryId, currentTask, action, location.state]);
-  
 
   useEffect(() => {
     if (action === 'new' && selectedCategory) {
-      setCategory_id(selectedCategory.id);
+      setFormState(prevFormState => ({
+        ...prevFormState,
+        category_id: selectedCategory.id,
+      }));
     }
-  }, [selectedCategory, action]);  
+  }, [selectedCategory, action]);
 
   useEffect(() => {
-    console.log('currentTask', currentTask);
-
-    if (currentTask) {
-      setTitle(currentTask.title);
-      setDescription(currentTask.description);
-      setCategory_id(currentTask ? currentTask.category_id : '');
-      setWeight(currentTask.weight);
-      setProgress(currentTask ? Number(currentTask.progress) : Number(0));
-    } else {
-      setTitle('');
-      setDescription('');
-      setWeight(1);
-      setProgress(Number(0));
-      setCategory_id(null); // set category_id to null when there is no current task
+    if (id && currentTask) { // for editing an existing task
+      setFormState({
+        title: currentTask.title,
+        description: currentTask.description,
+        category_id: currentTask.category_id,
+        weight: currentTask.weight,
+        progress: Number(currentTask.progress),
+      });
+    } else if (!id) { // for creating a new task
+      setFormState({
+        title: '',
+        description: '',
+        weight: 1,
+        progress: Number(0),
+        category_id: selectedCategory ? selectedCategory.id : null,
+      });
     }
-  }, [currentTask]);
-
+  }, [currentTask, id, selectedCategory]);  
 
   const handleSubmit = async (event) => {
     event.preventDefault();
     setLoading(true);
-  
-    const task = { id, title, description, category_id: category_id.toString(), weight, progress };
-    
+
+    const task = {
+      id,
+      title: formState.title,
+      description: formState.description,
+      category_id: formState.category_id.toString(),
+      weight: formState.weight,
+      progress: formState.progress,
+    };
+
     try {
       if (action === 'edit') {
-        updateTask(task);
+        await updateTask(task);
       } else if (action === 'new') {
-        addTask(task, category_id); // calling the addTask function passed as prop
+        await addTask(task, formState.category_id);
       }
+      setCurrentTask(null);
+      setOpen(true);
+      navigate(lastViablePath);
     } catch (error) {
       console.error('There was an error!', error);
     } finally {
-      setCurrentTask(null);
+      setFormState({
+        title: '',
+        description: '',
+        weight: 1,
+        progress: Number(0),
+        category_id: null,
+      });
       setLoading(false);
-      setOpen(true);
-      navigate(-1);
     }
   };
 
-
   const handleCancel = () => {
-    navigate(-1);
+    setFormState({
+      title: '',
+      description: '',
+      weight: 1,
+      progress: Number(0),
+      category_id: null,
+    });
+    setCurrentTask(null);
+    navigate(lastViablePath);
   };
 
   const handleClose = (event, reason) => {
@@ -101,96 +146,107 @@ const TaskForm = ({ currentTask, setCurrentTask, addTask, updateTask, action }) 
     }
 
     setOpen(false);
+    setFormState({
+      title: '',
+      description: '',
+      weight: 1,
+      progress: Number(0),
+      category_id: null,
+    });
+    setCurrentTask(null);
   };
-
-  const handleCategoryChange = (event) => {
-    setCategory_id(event.target.value);
-  };
-  
 
   return (
     <Box component="form" onSubmit={handleSubmit}>
-    <Box mb={2}>
-      <TextField
-        label="Title"
-        value={title}
-        onChange={(e) => setTitle(e.target.value)}
-        fullWidth
-        required
-        autoComplete="off"
-      />
-    </Box>
-    <Box mb={2}>
-      <TextField
-        label="Description"
-        value={description}
-        onChange={(e) => setDescription(e.target.value)}
-        fullWidth
-        multiline
-        rows={4}
-        autoComplete="off"
-      />
-    </Box>
-    <Box mb={2}>
-      <FormControl variant="outlined" fullWidth>
-        <InputLabel id="category-label">Category</InputLabel>
-        <Select
-          label="Category"
-          labelId="category-label"
-          value={category_id || ''}
-          onChange={handleCategoryChange}
-          input={<OutlinedInput label="Category" />}
-        >
-          {categories.map((category) => (
-            <MenuItem key={category.id} value={category.id}>
-              {category.name}
-            </MenuItem>
-          ))}
-        </Select>
-      </FormControl>
-    </Box>
-    <Box mb={2}>
-      <FormControl variant="outlined" fullWidth>
-        <InputLabel id="priority-label">Priority</InputLabel>
-        <Select
-          label="Priority"
-          labelId="priority-label"
-          value={weight}
-          onChange={(e) => setWeight(e.target.value)}
-          input={<OutlinedInput label="Priority" />}
-        >
-          {[1, 2, 3, 4, 5].map((option) => (
-            <MenuItem key={option} value={option}>
-              {option}
-            </MenuItem>
-          ))}
-        </Select>
-      </FormControl>
-    </Box>
-    <Box mb={2}>
-      <Typography id="progress-slider" gutterBottom>
-        Progress:
-      </Typography>
-      <Slider
-        aria-labelledby="progress-slider"
-        value={progress}
-        onChange={(e, value) => setProgress(Number(value))}
-        valueLabelDisplay="auto"
-        valueLabelFormat={(value) => `${value}%`}
-        step={1}
-        marks
-        min={0}
-        max={100}
-      />
-    </Box>
-    <Box mb={2} sx={{display: 'flex', gap: 2}}>
-      <Button type="submit" variant="contained" color="primary" disabled={loading}>
-        {loading ? 'Loading...' : (action === 'new' ? 'Add Task' : 'Update Task')}
-      </Button>
-      <Button type="button" variant="outlined" color="primary" disabled={loading} onClick={handleCancel}>
-        Cancel
-      </Button>
-    </Box>
+      <Box mb={2}>
+        <TextField
+          name="title"
+          label="Title"
+          value={formState.title}
+          onChange={handleInputChange}
+          fullWidth
+          required
+          autoComplete="off"
+        />
+      </Box>
+      <Box mb={2}>
+        <TextField
+          name="description"
+          label="Description"
+          value={formState.description}
+          onChange={handleInputChange}
+          fullWidth
+          multiline
+          minRows={4}
+          maxRows={17}
+          autoComplete="off"
+        />
+      </Box>
+      <Box mb={2}>
+        <FormControl variant="outlined" fullWidth>
+          <InputLabel id="category-label">Category</InputLabel>
+          <Select
+            name="category_id"
+            label="Category"
+            labelId="category-label"
+            value={formState.category_id || ''}
+            onChange={handleInputChange}
+            input={<OutlinedInput label="Category" />}
+          >
+            {categories.map((category) => (
+              <MenuItem key={category.id} value={category.id}>
+                {category.name}
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+      </Box>
+      <Box mb={2}>
+        <FormControl variant="outlined" fullWidth>
+          <InputLabel id="priority-label">Priority</InputLabel>
+          <Select
+            name="weight"
+            label="Priority"
+            labelId="priority-label"
+            value={formState.weight}
+            onChange={handleInputChange}
+            input={<OutlinedInput label="Priority" />}
+          >
+            {[1, 2, 3, 4, 5].map((option) => (
+              <MenuItem key={option} value={option}>
+                {option}
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+      </Box>
+      <Box mb={2}>
+        <Typography id="progress-slider" gutterBottom>
+          Progress:
+        </Typography>
+        <Slider
+          aria-labelledby="progress-slider"
+          value={formState.progress}
+          onChange={(e, value) => setFormState(prevFormState => ({
+            ...prevFormState,
+            progress: Number(value),
+          }))}
+          valueLabelDisplay="auto"
+          valueLabelFormat={(value) => `${value}%`}
+          step={1}
+          marks
+          min={0}
+          max={100}
+        />
+      </Box>
+      <Box mb={2} sx={{display: 'flex', gap: 2}}>
+        <Button type="submit" variant="contained" color="primary" disabled={loading}>
+          {loading ? 'Loading...' : (action === 'new' ? 'Add Task' : 'Update Task')}
+        </Button>
+        <Button type="button" variant="outlined" color="primary" disabled={loading} onClick={handleCancel}>
+          Cancel
+        </Button>
+      </Box>
       <Snackbar
         anchorOrigin={{
           vertical: 'bottom',
@@ -199,13 +255,16 @@ const TaskForm = ({ currentTask, setCurrentTask, addTask, updateTask, action }) 
         open={open}
         autoHideDuration={6000}
         onClose={handleClose}
-        message="Task saved successfully"
+        message={action === 'new' ? 'Task added successfully!' : 'Task updated successfully!'}
         action={
-          <React.Fragment>
-            <IconButton size="small" aria-label="close" color="inherit" onClick={handleClose}>
-              <CloseIcon fontSize="small" />
-            </IconButton>
-          </React.Fragment>
+          <IconButton
+            size="small"
+            aria-label="close"
+            color="inherit"
+            onClick={handleClose}
+          >
+            <CloseIcon fontSize="small" />
+          </IconButton>
         }
       />
     </Box>

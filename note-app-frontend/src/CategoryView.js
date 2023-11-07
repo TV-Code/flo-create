@@ -12,7 +12,7 @@ import { alpha } from '@mui/system';
 import { Box, Typography, LinearProgress } from '@mui/material';
 import { useFetchNotes, useFetchTasks, useFetchJournals, sortMixedData } from './CustomHooks';
 
-const CategoryView = ({ activeTab, setActiveTab, sortCriteria, setSortCriteria, deleteItem }) => {
+const CategoryView = ({ activeTab, setActiveTab, sortCriteria, setSortCriteria, deleteItem, getCategoryColor, viewMode }) => {
   const { id } = useParams();
   const [category, setCategory] = useState(null);
   const [categoryColor, setCategoryColor] = useState('default');
@@ -71,15 +71,15 @@ const CategoryView = ({ activeTab, setActiveTab, sortCriteria, setSortCriteria, 
   const renderTabContent = () => {
     switch (activeTab) {
       case 0:
-        return <NoteList notes={notes} />;
+        return <NoteList notes={notes} getCategoryColor={getCategoryColor} viewMode={viewMode} />;
       case 1:
-        return <TaskList tasks={tasks} categoryColor={categoryColor} lightenedColor={lightenedColor} showProgressBar={false} />;
+        return <TaskList tasks={tasks} categoryColor={categoryColor} lightenedColor={lightenedColor} showProgressBar={false} getCategoryColor={getCategoryColor} viewMode={viewMode} />;
       case 2:
-        return <JournalList journals={journals} />;
+        return <JournalList journals={journals} getCategoryColor={getCategoryColor} viewMode={viewMode} />;
       case 3:
       default:
         const mixedListData = prepareMixedListData();
-        return <MixedList data={mixedListData} categoryColor={categoryColor} lightenedColor={lightenedColor} deleteItem={deleteItem} />
+        return <MixedList data={mixedListData} categoryColor={categoryColor} lightenedColor={lightenedColor} deleteItem={deleteItem} getCategoryColor={getCategoryColor} viewMode={viewMode} />
     }
   };
 

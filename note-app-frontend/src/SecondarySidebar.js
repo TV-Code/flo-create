@@ -20,6 +20,7 @@ import SaveIcon from '@mui/icons-material/Save';
 import SearchIcon from '@mui/icons-material/Search';
 import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
 import axios from 'axios';
+import { useTheme } from '@emotion/react';
 
 function SecondarySidebar({ isDrawerOpen, toggleDrawer, onCategorySelect }) {
   const [categories, setCategories] = useState([]);
@@ -34,6 +35,7 @@ function SecondarySidebar({ isDrawerOpen, toggleDrawer, onCategorySelect }) {
   const [searchTerm, setSearchTerm] = useState('');
   const circlePickerRef = useRef(null);
   const navigate = useNavigate();
+  const theme = useTheme();
 
   useEffect(() => {
     axios
@@ -159,7 +161,7 @@ function SecondarySidebar({ isDrawerOpen, toggleDrawer, onCategorySelect }) {
   return (
     <div>
       <Drawer anchor="left" open={isDrawerOpen} onClose={() => {toggleDrawer(false); setNewCategoryColor('#f25042');}}>
-        <div style={{ padding: '10px', height: '100%', width: 200, backgroundColor: '#f9f4ef' }}>
+        <div style={{ padding: '10px', height: '100%', width: 200, backgroundColor: theme.palette.background.paper }}>
           <TextField
             label="Search"
             variant="standard"
@@ -170,7 +172,7 @@ function SecondarySidebar({ isDrawerOpen, toggleDrawer, onCategorySelect }) {
             InputProps={{
               endAdornment: (
                 <InputAdornment position="end">
-                  <SearchIcon />
+                  <SearchIcon style={{ color: theme.palette.text.primary }}/>
                 </InputAdornment>
               ),
             }}
@@ -186,7 +188,7 @@ function SecondarySidebar({ isDrawerOpen, toggleDrawer, onCategorySelect }) {
           />
           <div ref={circlePickerRef}>
           <IconButton color="primary" onClick={handleAddCategory} id="addButton">
-            <AddIcon />
+            <AddIcon style={{ color: theme.palette.text.primary }}/>
           </IconButton>
           <IconButton color="primary" onClick={handleColorPickerButton} id="colorPickerButton">
             <div
