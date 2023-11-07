@@ -42,8 +42,9 @@ npm install
 # Start the development server
 npm start
 
-### Backend
+```
 
+### Backend
 ```bash
 # Navigate to the backend directory
 cd backend
@@ -63,6 +64,7 @@ conda activate flo-create-env
 
 # Run the Flask server
 flask run
+```
 
 ## Usage
 
