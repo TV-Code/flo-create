@@ -8,7 +8,6 @@ Flo-Create is a productivity application designed to streamline your day-to-day 
 - Organize your thoughts and notes, and access them easily whenever needed.
 - Maintain a personal journal with the ability to look back on past entries.
 - Categorize tasks, notes, and journal entries with customizable categories.
-- Full-featured user interface with responsive design for all devices.
 
 ## Tech Stack
 
